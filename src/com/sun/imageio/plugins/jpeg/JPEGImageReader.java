@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2007, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  *
  *
@@ -87,7 +87,12 @@ public class JPEGImageReader extends ImageReader {
 
     static {
         java.security.AccessController.doPrivileged(
-            new sun.security.action.LoadLibraryAction("jpeg"));
+            new java.security.PrivilegedAction<Void>() {
+                public Void run() {
+                    System.loadLibrary("jpeg");
+                    return null;
+                }
+            });
         initReaderIDs(ImageInputStream.class,
                       JPEGQTable.class,
                       JPEGHuffmanTable.class);
@@ -1160,6 +1165,11 @@ public class JPEGImageReader extends ImageReader {
             target = imRas;
         }
         int [] bandSizes = target.getSampleModel().getSampleSize();
+        for (int i = 0; i < bandSizes.length; i++) {
+            if (bandSizes[i] <= 0 || bandSizes[i] > 8) {
+                throw new IIOException("Illegal band size: should be 0 < size <= 8");
+            }
+        }
 
         /*
          * If the process is sequential, and we have restart markers,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.sun.org.apache.xml.internal.security.encryption.XMLCipher;
 import com.sun.org.apache.xml.internal.security.signature.XMLSignature;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import org.w3c.dom.Element;
 
 
@@ -49,8 +50,11 @@ public class JCEMapper {
      *
      * @param id
      * @param algorithm
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the JCE algorithm
      */
     public static void register(String id, Algorithm algorithm) {
+        JavaUtils.checkRegisterPermission();
         algorithmsMap.put(id, algorithm);
     }
 
@@ -87,6 +91,10 @@ public class JCEMapper {
             new Algorithm("", "SHA1withDSA", "Signature")
         );
         algorithmsMap.put(
+            XMLSignature.ALGO_ID_SIGNATURE_DSA_SHA256,
+            new Algorithm("", "SHA256withDSA", "Signature")
+        );
+        algorithmsMap.put(
             XMLSignature.ALGO_ID_SIGNATURE_NOT_RECOMMENDED_RSA_MD5,
             new Algorithm("", "MD5withRSA", "Signature")
         );
@@ -113,6 +121,18 @@ public class JCEMapper {
         algorithmsMap.put(
             XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA1,
             new Algorithm("", "SHA1withECDSA", "Signature")
+        );
+        algorithmsMap.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA256,
+            new Algorithm("", "SHA256withECDSA", "Signature")
+        );
+        algorithmsMap.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA384,
+            new Algorithm("", "SHA384withECDSA", "Signature")
+        );
+        algorithmsMap.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA512,
+            new Algorithm("", "SHA512withECDSA", "Signature")
         );
         algorithmsMap.put(
             XMLSignature.ALGO_ID_MAC_HMAC_NOT_RECOMMENDED_MD5,
@@ -155,12 +175,28 @@ public class JCEMapper {
             new Algorithm("AES", "AES/CBC/ISO10126Padding", "BlockEncryption", 256)
         );
         algorithmsMap.put(
+            XMLCipher.AES_128_GCM,
+            new Algorithm("AES", "AES/GCM/NoPadding", "BlockEncryption", 128)
+        );
+        algorithmsMap.put(
+            XMLCipher.AES_192_GCM,
+            new Algorithm("AES", "AES/GCM/NoPadding", "BlockEncryption", 192)
+        );
+        algorithmsMap.put(
+            XMLCipher.AES_256_GCM,
+            new Algorithm("AES", "AES/GCM/NoPadding", "BlockEncryption", 256)
+        );
+        algorithmsMap.put(
             XMLCipher.RSA_v1dot5,
             new Algorithm("RSA", "RSA/ECB/PKCS1Padding", "KeyTransport")
         );
         algorithmsMap.put(
             XMLCipher.RSA_OAEP,
-            new Algorithm("RSA", "RSA/ECB/OAEPWithSHA1AndMGF1Padding", "KeyTransport")
+            new Algorithm("RSA", "RSA/ECB/OAEPPadding", "KeyTransport")
+        );
+        algorithmsMap.put(
+            XMLCipher.RSA_OAEP_11,
+            new Algorithm("RSA", "RSA/ECB/OAEPPadding", "KeyTransport")
         );
         algorithmsMap.put(
             XMLCipher.DIFFIE_HELLMAN,
@@ -264,8 +300,11 @@ public class JCEMapper {
     /**
      * Sets the default Provider for obtaining the security algorithms
      * @param provider the default providerId.
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to set the JCE provider
      */
     public static void setProviderId(String provider) {
+        JavaUtils.checkRegisterPermission();
         providerName = provider;
     }
 

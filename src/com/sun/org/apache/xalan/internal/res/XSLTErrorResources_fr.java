@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
- * Copyright 1999-2004 The Apache Software Foundation.
+ * Copyright 1999-2005 The Apache Software Foundation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XSLTErrorResources_fr.java,v 1.2.4.1 2005/09/13 10:20:30 pvedula Exp $
  */
 package com.sun.org.apache.xalan.internal.res;
 
@@ -471,7 +468,13 @@ public class XSLTErrorResources_fr extends ListResourceBundle
 
   // Error messages...
 
-  private static final Object[][] _contents = new Object[][] {
+  /** Get the lookup table for error messages.
+    *
+    * @return The message lookup table.
+    */
+  public Object[][] getContents()
+  {
+      return new Object[][] {
 
   /** Error message ID that has a null message, but takes in a single object.    */
   {"ER0000" , "{0}" },
@@ -925,7 +928,7 @@ public class XSLTErrorResources_fr extends ListResourceBundle
         "Gestionnaire de contenu NULL"},
 
     { ER_NULL_ERROR_HANDLER,
-        "Gestionnaire d'erreur NULL"},
+        "Gestionnaire d'erreurs NULL"},
 
     { ER_CANNOT_CALL_PARSE,
         "impossible d'appeler l'analyse si le gestionnaire de contenu n'est pas d\u00E9fini"},
@@ -1207,7 +1210,7 @@ public class XSLTErrorResources_fr extends ListResourceBundle
       "Le nom de fonction ne peut pas \u00EAtre NULL."},
 
     { ER_XPATH_RESOLVER_NEGATIVE_ARITY,
-      "Le nombre d'arguments ne peut pas \u00EAtre n\u00E9gatif."},
+      "L'arit\u00E9 ne peut pas \u00EAtre n\u00E9gative."},
   // Warnings...
 
     { WG_FOUND_CURLYBRACE,
@@ -1359,7 +1362,7 @@ public class XSLTErrorResources_fr extends ListResourceBundle
   {  "optionQ", "   [-Q  (Mode silencieux)]"},
   {  "optionLF", "   [-LF (Utiliser les retours \u00E0 la ligne uniquement en sortie {valeur par d\u00E9faut : CR/LF})]"},
   {  "optionCR", "   [-CR (Utiliser les retours chariot uniquement en sortie {valeur par d\u00E9faut : CR/LF})]"},
-  { "optionESCAPE", "   [-ESCAPE (Avec caract\u00E8res d'espacement {valeur par d\u00E9faut : <>&\"\'\\r\\n}]"},
+  { "optionESCAPE", "   [-ESCAPE (Avec caract\u00E8res d'espacement {valeur par d\u00E9faut : <>&\"'\\r\\n}]"},
   { "optionINDENT", "   [-INDENT (Contr\u00F4ler le nombre d'espaces \u00E0 mettre en retrait {valeur par d\u00E9faut : 0})]"},
   { "optionTT", "   [-TT (G\u00E9n\u00E9rer une trace des mod\u00E8les pendant qu'ils sont appel\u00E9s.)]"},
   { "optionTG", "   [-TG (G\u00E9n\u00E9rer une trace de chaque \u00E9v\u00E9nement de g\u00E9n\u00E9ration.)]"},
@@ -1412,13 +1415,6 @@ public class XSLTErrorResources_fr extends ListResourceBundle
 
   };
 
-  /** Get the lookup table for error messages.
-   *
-   * @return The int to message lookup table.
-   */
-  public Object[][] getContents()
-  {
-      return _contents;
   }
   // ================= INFRASTRUCTURE ======================
 

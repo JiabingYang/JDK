@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -25,12 +25,15 @@ package com.sun.org.apache.xml.internal.utils;
 import com.sun.org.apache.xalan.internal.XalanConstants;
 import com.sun.org.apache.xalan.internal.utils.FactoryImpl;
 import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
+import com.sun.org.apache.xalan.internal.utils.XMLSecurityManager;
 import java.util.HashMap;
+
 import javax.xml.XMLConstants;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
@@ -63,10 +66,14 @@ public class XMLReaderManager {
     private HashMap m_inUse;
 
     private boolean m_useServicesMechanism = true;
+
+    private boolean _secureProcessing;
      /**
      * protocols allowed for external DTD references in source file and/or stylesheet.
      */
     private String _accessExternalDTD = XalanConstants.EXTERNAL_ACCESS_DEFAULT;
+
+    private XMLSecurityManager _xmlSecurityManager;
 
     /**
      * Hidden constructor
@@ -118,7 +125,12 @@ public class XMLReaderManager {
                     // TransformerFactory creates a reader via the
                     // XMLReaderFactory if setXMLReader is not used
                     reader = XMLReaderFactory.createXMLReader();
-
+                    try {
+                        reader.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, _secureProcessing);
+                    } catch (SAXNotRecognizedException e) {
+                        XMLSecurityManager.printWarning(reader.getClass().getName(),
+                                XMLConstants.FEATURE_SECURE_PROCESSING, e);
+                    }
                 } catch (Exception e) {
                    try {
                         // If unable to create an instance, let's try to use
@@ -160,8 +172,25 @@ public class XMLReaderManager {
             //reader is cached, but this property might have been reset
             reader.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, _accessExternalDTD);
         } catch (SAXException se) {
-            System.err.println("Warning:  " + reader.getClass().getName() + ": "
-                        + se.getMessage());
+            XMLSecurityManager.printWarning(reader.getClass().getName(),
+                    XMLConstants.ACCESS_EXTERNAL_DTD, se);
+        }
+
+        String lastProperty = "";
+        try {
+            if (_xmlSecurityManager != null) {
+                for (XMLSecurityManager.Limit limit : XMLSecurityManager.Limit.values()) {
+                    lastProperty = limit.apiProperty();
+                    reader.setProperty(lastProperty,
+                            _xmlSecurityManager.getLimitValueAsString(limit));
+                }
+                if (_xmlSecurityManager.printEntityCountInfo()) {
+                    lastProperty = XalanConstants.JDK_ENTITY_COUNT_INFO;
+                    reader.setProperty(XalanConstants.JDK_ENTITY_COUNT_INFO, XalanConstants.JDK_YES);
+                }
+            }
+        } catch (SAXException se) {
+            XMLSecurityManager.printWarning(reader.getClass().getName(), lastProperty, se);
         }
 
         return reader;
@@ -195,11 +224,22 @@ public class XMLReaderManager {
     }
 
     /**
+     * Set feature
+     */
+    public void setFeature(String name, boolean value) {
+        if (name.equals(XMLConstants.FEATURE_SECURE_PROCESSING)) {
+            _secureProcessing = value;
+        }
+    }
+
+    /**
      * Get property value
      */
-    public String getProperty(String name) {
+    public Object getProperty(String name) {
         if (name.equals(XMLConstants.ACCESS_EXTERNAL_DTD)) {
             return _accessExternalDTD;
+        } else if (name.equals(XalanConstants.SECURITY_MANAGER)) {
+            return _xmlSecurityManager;
         }
         return null;
     }
@@ -207,9 +247,11 @@ public class XMLReaderManager {
     /**
      * Set property.
      */
-    public void setProperty(String name, String value) {
+    public void setProperty(String name, Object value) {
         if (name.equals(XMLConstants.ACCESS_EXTERNAL_DTD)) {
             _accessExternalDTD = (String)value;
+        } else if (name.equals(XalanConstants.SECURITY_MANAGER)) {
+            _xmlSecurityManager = (XMLSecurityManager)value;
         }
     }
 }

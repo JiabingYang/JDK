@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -37,7 +37,6 @@ import com.sun.org.apache.xerces.internal.util.AugmentationsImpl;
 import com.sun.org.apache.xerces.internal.util.HTTPInputSource;
 import com.sun.org.apache.xerces.internal.util.IntStack;
 import com.sun.org.apache.xerces.internal.util.ParserConfigurationSettings;
-import com.sun.org.apache.xerces.internal.util.SecurityManager;
 import com.sun.org.apache.xerces.internal.util.SymbolTable;
 import com.sun.org.apache.xerces.internal.util.URI;
 import com.sun.org.apache.xerces.internal.util.XMLAttributesImpl;
@@ -45,6 +44,7 @@ import com.sun.org.apache.xerces.internal.util.XMLResourceIdentifierImpl;
 import com.sun.org.apache.xerces.internal.util.XMLChar;
 import com.sun.org.apache.xerces.internal.util.XMLSymbols;
 import com.sun.org.apache.xerces.internal.util.URI.MalformedURIException;
+import com.sun.org.apache.xerces.internal.utils.XMLSecurityManager;
 import com.sun.org.apache.xerces.internal.xni.Augmentations;
 import com.sun.org.apache.xerces.internal.xni.NamespaceContext;
 import com.sun.org.apache.xerces.internal.xni.QName;
@@ -68,8 +68,8 @@ import com.sun.org.apache.xerces.internal.xni.parser.XMLParserConfiguration;
 import com.sun.org.apache.xerces.internal.xpointer.XPointerHandler;
 import com.sun.org.apache.xerces.internal.xpointer.XPointerProcessor;
 import com.sun.org.apache.xerces.internal.utils.ObjectFactory;
-import com.sun.org.apache.xerces.internal.utils.Objects;
 import com.sun.org.apache.xerces.internal.utils.XMLSecurityPropertyManager;
+import java.util.Objects;
 
 /**
  * <p>
@@ -289,7 +289,7 @@ public class XIncludeHandler
     protected SymbolTable fSymbolTable;
     protected XMLErrorReporter fErrorReporter;
     protected XMLEntityResolver fEntityResolver;
-    protected SecurityManager fSecurityManager;
+    protected XMLSecurityManager fSecurityManager;
     protected XMLSecurityPropertyManager fSecurityPropertyMgr;
 
     // these are needed for text include processing
@@ -517,8 +517,8 @@ public class XIncludeHandler
 
         // Get security manager.
         try {
-            SecurityManager value =
-                (SecurityManager)componentManager.getProperty(
+            XMLSecurityManager value =
+                (XMLSecurityManager)componentManager.getProperty(
                     SECURITY_MANAGER);
 
             if (value != null) {
@@ -674,7 +674,7 @@ public class XIncludeHandler
             return;
         }
         if (propertyId.equals(SECURITY_MANAGER)) {
-            fSecurityManager = (SecurityManager)value;
+            fSecurityManager = (XMLSecurityManager)value;
             if (fChildConfig != null) {
                 fChildConfig.setProperty(propertyId, value);
             }

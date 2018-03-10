@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2003, 2006, 2013 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2016, Oracle and/or its affiliates. All rights reserved.
  */
-
 /*
- * Copyright 2005 The Apache Software Foundation.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,17 +20,16 @@
 
 package com.sun.org.apache.xerces.internal.impl ;
 
-import com.sun.org.apache.xerces.internal.impl.Constants;
 import com.sun.org.apache.xerces.internal.impl.io.ASCIIReader;
 import com.sun.org.apache.xerces.internal.impl.io.UCSReader;
 import com.sun.org.apache.xerces.internal.impl.io.UTF8Reader;
 import com.sun.org.apache.xerces.internal.impl.msg.XMLMessageFormatter;
-import com.sun.org.apache.xerces.internal.impl.XMLEntityHandler;
 import com.sun.org.apache.xerces.internal.impl.validation.ValidationManager;
 import com.sun.org.apache.xerces.internal.util.*;
-import com.sun.org.apache.xerces.internal.util.SecurityManager;
 import com.sun.org.apache.xerces.internal.util.URI;
 import com.sun.org.apache.xerces.internal.utils.SecuritySupport;
+import com.sun.org.apache.xerces.internal.utils.XMLLimitAnalyzer;
+import com.sun.org.apache.xerces.internal.utils.XMLSecurityManager;
 import com.sun.org.apache.xerces.internal.utils.XMLSecurityPropertyManager;
 import com.sun.org.apache.xerces.internal.xni.Augmentations;
 import com.sun.org.apache.xerces.internal.xni.XMLResourceIdentifier;
@@ -46,12 +45,12 @@ import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Stack;
-import javax.xml.XMLConstants;
+import javax.xml.stream.XMLInputFactory;
 
 
 /**
@@ -173,7 +172,6 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
 
     /** access external dtd: file protocol */
     static final String EXTERNAL_ACCESS_DEFAULT = Constants.EXTERNAL_ACCESS_DEFAULT;
-
 
     // recognized features and properties
 
@@ -305,8 +303,14 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     /** Property Manager. This is used from Stax */
     protected PropertyManager fPropertyManager ;
 
+    /** StAX properties */
+    boolean fSupportDTD = true;
+    boolean fReplaceEntityReferences = true;
+    boolean fSupportExternalEntities = true;
+
     /** used to restrict external access */
     protected String fAccessExternalDTD = EXTERNAL_ACCESS_DEFAULT;
+
     // settings
 
     /**
@@ -324,9 +328,12 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      */
     protected int fBufferSize = DEFAULT_BUFFER_SIZE;
 
-    // stores defaults for entity expansion limit if it has
-    // been set on the configuration.
-    protected SecurityManager fSecurityManager = null;
+    /** Security Manager */
+    protected XMLSecurityManager fSecurityManager = null;
+
+    protected XMLLimitAnalyzer fLimitAnalyzer = null;
+
+    protected int entityExpansionIndex;
 
     /**
      * True if the document entity is standalone. This should really
@@ -352,20 +359,16 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     /** XML 1.1 entity scanner. */
     protected XMLEntityScanner fXML11EntityScanner;
 
-    /** entity expansion limit (contains useful data if and only if
-    fSecurityManager is non-null) */
-    protected int fEntityExpansionLimit = 0;
-
     /** count of entities expanded: */
     protected int fEntityExpansionCount = 0;
 
     // entities
 
     /** Entities. */
-    protected Hashtable fEntities = new Hashtable();
+    protected Map<String, Entity> fEntities = new HashMap<>();
 
     /** Entity stack. */
-    protected Stack fEntityStack = new Stack();
+    protected Stack<Entity> fEntityStack = new Stack<>();
 
     /** Current entity. */
     protected Entity.ScannedEntity fCurrentEntity = null;
@@ -399,6 +402,8 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      * If this constructor is used to create the object, reset() should be invoked on this object
      */
     public XMLEntityManager() {
+        //for entity managers not created by parsers
+        fSecurityManager = new XMLSecurityManager(true);
         fEntityStorage = new XMLEntityStorage(this) ;
         setScannerVersion(Constants.XML_VERSION_1_0);
     } // <init>()
@@ -576,6 +581,8 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     /**
      * This method uses the passed-in XMLInputSource to make
      * fCurrentEntity usable for reading.
+     *
+     * @param reference flag to indicate whether the entity is an Entity Reference.
      * @param name  name of the entity (XML is it's the document entity)
      * @param xmlInputSource    the input source, with sufficient information
      *      to begin scanning characters.
@@ -586,7 +593,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      *  XNIException    If any parser-specific goes wrong.
      * @return the encoding of the new entity or null if a character stream was employed
      */
-    public String setupCurrentEntity(String name, XMLInputSource xmlInputSource,
+    public String setupCurrentEntity(boolean reference, String name, XMLInputSource xmlInputSource,
             boolean literal, boolean isExternal)
             throws IOException, XNIException {
         // get information
@@ -624,10 +631,10 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
                         final HTTPInputSource httpInputSource = (HTTPInputSource) xmlInputSource;
 
                         // set request properties
-                        Iterator propIter = httpInputSource.getHTTPRequestProperties();
+                        Iterator<Map.Entry<String, String>> propIter = httpInputSource.getHTTPRequestProperties();
                         while (propIter.hasNext()) {
-                            Map.Entry entry = (Map.Entry) propIter.next();
-                            urlConnection.setRequestProperty((String) entry.getKey(), (String) entry.getValue());
+                            Map.Entry<String, String> entry = propIter.next();
+                            urlConnection.setRequestProperty(entry.getKey(), entry.getValue());
                         }
 
                         // set preference for redirection
@@ -829,10 +836,15 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
          * in the prolog of the XML document is not considered. Hence, prolog can
          * be read in Chunks of data instead of byte by byte.
          */
-        fCurrentEntity = new com.sun.xml.internal.stream.Entity.ScannedEntity(name,new XMLResourceIdentifierImpl(publicId, literalSystemId, baseSystemId, expandedSystemId),stream, reader, encoding, literal, encodingExternallySpecified, isExternal);
+        fCurrentEntity = new Entity.ScannedEntity(reference, name,
+                new XMLResourceIdentifierImpl(publicId, literalSystemId, baseSystemId, expandedSystemId),
+                stream, reader, encoding, literal, encodingExternallySpecified, isExternal);
         fCurrentEntity.setEncodingExternallySpecified(encodingExternallySpecified);
         fEntityScanner.setCurrentEntity(fCurrentEntity);
         fResourceIdentifier.setValues(publicId, literalSystemId, baseSystemId, expandedSystemId);
+        if (fLimitAnalyzer != null) {
+            fLimitAnalyzer.startEntity(name);
+        }
         return encoding;
     } //setupCurrentEntity(String, XMLInputSource, boolean, boolean):  String
 
@@ -846,7 +858,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      */
     public boolean isExternalEntity(String entityName) {
 
-        Entity entity = (Entity)fEntities.get(entityName);
+        Entity entity = fEntities.get(entityName);
         if (entity == null) {
             return false;
         }
@@ -863,7 +875,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      */
     public boolean isEntityDeclInExternalSubset(String entityName) {
 
-        Entity entity = (Entity)fEntities.get(entityName);
+        Entity entity = fEntities.get(entityName);
         if (entity == null) {
             return false;
         }
@@ -893,13 +905,13 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
 
     public boolean isDeclaredEntity(String entityName) {
 
-        Entity entity = (Entity)fEntities.get(entityName);
+        Entity entity = fEntities.get(entityName);
         return entity != null;
     }
 
     public boolean isUnparsedEntity(String entityName) {
 
-        Entity entity = (Entity)fEntities.get(entityName);
+        Entity entity = fEntities.get(entityName);
         if (entity == null) {
             return false;
         }
@@ -1041,7 +1053,6 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
         String literalSystemId = resourceIdentifier.getLiteralSystemId();
         String baseSystemId = resourceIdentifier.getBaseSystemId();
         String expandedSystemId = resourceIdentifier.getExpandedSystemId();
-        String namespace = resourceIdentifier.getNamespace();
 
         // if no base systemId given, assume that it's relative
         // to the systemId of the current scanned entity
@@ -1094,6 +1105,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     /**
      * Starts a named entity.
      *
+     * @param isGE flag to indicate whether the entity is a General Entity
      * @param entityName The name of the entity to start.
      * @param literal    True if this entity is started within a literal
      *                   value.
@@ -1101,11 +1113,11 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      * @throws IOException  Thrown on i/o error.
      * @throws XNIException Thrown by entity handler to signal an error.
      */
-    public void startEntity(String entityName, boolean literal)
+    public void startEntity(boolean isGE, String entityName, boolean literal)
     throws IOException, XNIException {
 
         // was entity declared?
-        Entity entity = (Entity)fEntityStorage.getEntity(entityName);
+        Entity entity = fEntityStorage.getEntity(entityName);
         if (entity == null) {
             if (fEntityHandler != null) {
                 String encoding = null;
@@ -1133,7 +1145,8 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
             boolean parameter = entityName.startsWith("%");
             boolean general = !parameter;
             if (unparsed || (general && !fExternalGeneralEntities) ||
-                    (parameter && !fExternalParameterEntities)) {
+                    (parameter && !fExternalParameterEntities) ||
+                    !fSupportDTD || !fSupportExternalEntities) {
 
                 if (fEntityHandler != null) {
                     fResourceIdentifier.clear();
@@ -1224,7 +1237,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
         }
 
         // start the entity
-        startEntity(entityName, xmlInputSource, literal, external);
+        startEntity(isGE, entityName, xmlInputSource, literal, external);
 
     } // startEntity(String,boolean)
 
@@ -1239,7 +1252,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      */
     public void startDocumentEntity(XMLInputSource xmlInputSource)
     throws IOException, XNIException {
-        startEntity(XMLEntity, xmlInputSource, false, true);
+        startEntity(false, XMLEntity, xmlInputSource, false, true);
     } // startDocumentEntity(XMLInputSource)
 
     //xxx these methods are not required.
@@ -1254,7 +1267,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      */
     public void startDTDEntity(XMLInputSource xmlInputSource)
     throws IOException, XNIException {
-        startEntity(DTDEntity, xmlInputSource, false, true);
+        startEntity(false, DTDEntity, xmlInputSource, false, true);
     } // startDTDEntity(XMLInputSource)
 
     // indicate start of external subset so that
@@ -1273,6 +1286,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      * This method can be used to insert an application defined XML
      * entity stream into the parsing stream.
      *
+     * @param isGE flag to indicate whether the entity is a General Entity
      * @param name           The name of the entity.
      * @param xmlInputSource The input source of the entity.
      * @param literal        True if this entity is started within a
@@ -1282,22 +1296,25 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
      * @throws IOException  Thrown on i/o error.
      * @throws XNIException Thrown by entity handler to signal an error.
      */
-    public void startEntity(String name,
+    public void startEntity(boolean isGE, String name,
             XMLInputSource xmlInputSource,
             boolean literal, boolean isExternal)
             throws IOException, XNIException {
 
-        String encoding = setupCurrentEntity(name, xmlInputSource, literal, isExternal);
+        String encoding = setupCurrentEntity(isGE, name, xmlInputSource, literal, isExternal);
 
         //when entity expansion limit is set by the Application, we need to
         //check for the entity expansion limit set by the parser, if number of entity
         //expansions exceeds the entity expansion limit, parser will throw fatal error.
         // Note that this represents the nesting level of open entities.
         fEntityExpansionCount++;
-        if( fSecurityManager != null && fEntityExpansionCount > fEntityExpansionLimit ){
-            fErrorReporter.reportError(XMLMessageFormatter.XML_DOMAIN,
-                                             "EntityExpansionLimitExceeded",
-                                             new Object[]{new Integer(fEntityExpansionLimit) },
+        if(fLimitAnalyzer != null) {
+           fLimitAnalyzer.addValue(entityExpansionIndex, name, 1);
+        }
+        if( fSecurityManager != null && fSecurityManager.isOverLimit(entityExpansionIndex, fLimitAnalyzer)){
+            fSecurityManager.debugPrint(fLimitAnalyzer);
+            fErrorReporter.reportError(XMLMessageFormatter.XML_DOMAIN,"EntityExpansionLimit",
+                    new Object[]{fSecurityManager.getLimitValueByIndex(entityExpansionIndex)},
                                              XMLErrorReporter.SEVERITY_FATAL_ERROR );
             // is there anything better to do than reset the counter?
             // at least one can envision debugging applications where this might
@@ -1361,6 +1378,12 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
         if(fCurrentEntity != null){
             //close the reader
             try{
+                if (fLimitAnalyzer != null) {
+                    fLimitAnalyzer.endEntity(XMLSecurityManager.Limit.GENERAL_ENTITY_SIZE_LIMIT, fCurrentEntity.name);
+                    if (fCurrentEntity.name.equals("[xml]")) {
+                        fSecurityManager.debugPrint(fLimitAnalyzer);
+                    }
+                }
                 fCurrentEntity.close();
             }catch(IOException ex){
                 throw new XNIException(ex);
@@ -1406,10 +1429,6 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     // XMLComponent methods
     //
     public void reset(PropertyManager propertyManager){
-        //reset fEntityStorage
-        fEntityStorage.reset(propertyManager);
-        //reset XMLEntityReaderImpl
-        fEntityScanner.reset(propertyManager);
         // xerces properties
         fSymbolTable = (SymbolTable)propertyManager.getProperty(Constants.XERCES_PROPERTY_PREFIX + Constants.SYMBOL_TABLE_PROPERTY);
         fErrorReporter = (XMLErrorReporter)propertyManager.getProperty(Constants.XERCES_PROPERTY_PREFIX + Constants.ERROR_REPORTER_PROPERTY);
@@ -1419,12 +1438,24 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
             fStaxEntityResolver = null;
         }
 
+        fSupportDTD = ((Boolean)propertyManager.getProperty(XMLInputFactory.SUPPORT_DTD)).booleanValue();
+        fReplaceEntityReferences = ((Boolean)propertyManager.getProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES)).booleanValue();
+        fSupportExternalEntities = ((Boolean)propertyManager.getProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES)).booleanValue();
+
         // Zephyr feature ignore-external-dtd is the opposite of Xerces' load-external-dtd
         fLoadExternalDTD = !((Boolean)propertyManager.getProperty(Constants.ZEPHYR_PROPERTY_PREFIX + Constants.IGNORE_EXTERNAL_DTD)).booleanValue();
 
         // JAXP 1.5 feature
         XMLSecurityPropertyManager spm = (XMLSecurityPropertyManager) propertyManager.getProperty(XML_SECURITY_PROPERTY_MANAGER);
         fAccessExternalDTD = spm.getValue(XMLSecurityPropertyManager.Property.ACCESS_EXTERNAL_DTD);
+
+        fSecurityManager = (XMLSecurityManager)propertyManager.getProperty(SECURITY_MANAGER);
+
+        fLimitAnalyzer = new XMLLimitAnalyzer();
+        //reset fEntityStorage
+        fEntityStorage.reset(propertyManager);
+        //reset XMLEntityReaderImpl
+        fEntityScanner.reset(propertyManager);
 
         // initialize state
         //fStandalone = false;
@@ -1485,7 +1516,13 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
         fEntityResolver = (XMLEntityResolver)componentManager.getProperty(ENTITY_RESOLVER, null);
         fStaxEntityResolver = (StaxEntityResolverWrapper)componentManager.getProperty(STAX_ENTITY_RESOLVER, null);
         fValidationManager = (ValidationManager)componentManager.getProperty(VALIDATION_MANAGER, null);
-        fSecurityManager = (SecurityManager)componentManager.getProperty(SECURITY_MANAGER, null);
+        fSecurityManager = (XMLSecurityManager)componentManager.getProperty(SECURITY_MANAGER, null);
+        entityExpansionIndex = fSecurityManager.getIndex(Constants.JDK_ENTITY_EXPANSION_LIMIT);
+
+        //StAX Property
+        fSupportDTD = true;
+        fReplaceEntityReferences = true;
+        fSupportExternalEntities = true;
 
         // JAXP 1.5 feature
         XMLSecurityPropertyManager spm = (XMLSecurityPropertyManager) componentManager.getProperty(XML_SECURITY_PROPERTY_MANAGER, null);
@@ -1506,8 +1543,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
     // a class acting as a component manager but not
     // implementing that interface for whatever reason.
     public void reset() {
-        fEntityExpansionLimit = (fSecurityManager != null)?fSecurityManager.getEntityExpansionLimit():0;
-
+        fLimitAnalyzer = new XMLLimitAnalyzer();
         // initialize state
         fStandalone = false;
         fEntities.clear();
@@ -1642,8 +1678,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
             }
             if (suffixLength == Constants.SECURITY_MANAGER_PROPERTY.length() &&
                 propertyId.endsWith(Constants.SECURITY_MANAGER_PROPERTY)) {
-                fSecurityManager = (SecurityManager)value;
-                fEntityExpansionLimit = (fSecurityManager != null)?fSecurityManager.getEntityExpansionLimit():0;
+                fSecurityManager = (XMLSecurityManager)value;
             }
         }
 
@@ -1653,6 +1688,10 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
             XMLSecurityPropertyManager spm = (XMLSecurityPropertyManager)value;
             fAccessExternalDTD = spm.getValue(XMLSecurityPropertyManager.Property.ACCESS_EXTERNAL_DTD);
         }
+    }
+
+    public void setLimitAnalyzer(XMLLimitAnalyzer fLimitAnalyzer) {
+        this.fLimitAnalyzer = fLimitAnalyzer;
     }
 
     /**
@@ -1968,14 +2007,6 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
 
         // system id has to be a valid URI
         if (strict) {
-
-
-            // check if there is a system id before
-            // trying to expand it.
-            if (systemId == null) {
-                return null;
-            }
-
             try {
                 // if it's already an absolute one, return it
                 new URI(systemId);
@@ -2883,7 +2914,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
                     if (!fCurrentEntity.xmlDeclChunkRead)
                     {
                         fCurrentEntity.xmlDeclChunkRead = true;
-                        len = fCurrentEntity.DEFAULT_XMLDECL_BUFFER_SIZE;
+                        len = Entity.ScannedEntity.DEFAULT_XMLDECL_BUFFER_SIZE;
                     }
                     return fInputStream.read(b, off, len);
                 }

@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
- * Copyright 1999-2004 The Apache Software Foundation.
+ * Copyright 1999-2005 The Apache Software Foundation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XSLTErrorResources_de.java,v 1.2.4.1 2005/09/13 10:08:18 pvedula Exp $
  */
 package com.sun.org.apache.xalan.internal.res;
 
@@ -471,7 +468,13 @@ public class XSLTErrorResources_de extends ListResourceBundle
 
   // Error messages...
 
-  private static final Object[][] _contents = new Object[][] {
+  /** Get the lookup table for error messages.
+    *
+    * @return The message lookup table.
+    */
+  public Object[][] getContents()
+  {
+      return new Object[][] {
 
   /** Error message ID that has a null message, but takes in a single object.    */
   {"ER0000" , "{0}" },
@@ -1010,7 +1013,7 @@ public class XSLTErrorResources_de extends ListResourceBundle
      "Systemeigenschaft \"org.xml.sax.parser\" nicht angegeben"},
 
     { ER_PARSER_ARG_CANNOT_BE_NULL,
-     "Parser-Argument darf nicht null sein"},
+     "Parserargument darf nicht null sein"},
 
     { ER_FEATURE,
      "Feature: {0}"},
@@ -1207,7 +1210,7 @@ public class XSLTErrorResources_de extends ListResourceBundle
       "Funktionsname darf nicht null sein."},
 
     { ER_XPATH_RESOLVER_NEGATIVE_ARITY,
-      "Anzahl von Argumenten darf nicht negativ sein."},
+      "Argumentanzahl darf nicht negativ sein."},
   // Warnings...
 
     { WG_FOUND_CURLYBRACE,
@@ -1353,13 +1356,13 @@ public class XSLTErrorResources_de extends ListResourceBundle
   { "optionLXCIN", "   [-LXCIN compiledStylesheetFileNameIn]"},
   { "optionLXCOUT", "   [-LXCOUT compiledStylesheetFileNameOutOut]"},
   { "optionPARSER", "   [-PARSER fully qualified class name of parser liaison]"},
-  {  "optionE", "   [-E (Entit\u00E4tsreferenzen nicht einblenden)]"},
-  {  "optionV",  "   [-E (Entit\u00E4tsreferenzen nicht einblenden)]"},
+  {  "optionE", "   [-E (Entityreferenzen nicht einblenden)]"},
+  {  "optionV",  "   [-E (Entityreferenzen nicht einblenden)]"},
   {  "optionQC", "   [-QC (Stille Musterkonfliktwarnungen)]"},
-  {  "optionQ", "   [-Q  (Stiller Modus)]"},
+  {  "optionQ", "   [-Q  (Silent-Modus)]"},
   {  "optionLF", "   [-LF (Nur Zeilenvorsch\u00FCbe bei Ausgabe verwenden {Standard ist CR/LF})]"},
   {  "optionCR", "   [-CR (Nur Zeilenschaltungen bei Ausgabe verwenden {Standard ist CR/LF})]"},
-  { "optionESCAPE", "   [-ESCAPE (Escape-Zeichen {Standard ist <>&\"\'\r\n}]"},
+  { "optionESCAPE", "   [-ESCAPE (Escapezeichen {Standard ist <>&\"'\r\n}]"},
   { "optionINDENT", "   [-INDENT (Steuern, wie viele Leerzeichen der Einzug enthalten soll {Standard ist 0})]"},
   { "optionTT", "   [-TT (Vorlagen verfolgen, wenn diese aufgerufen werden.)]"},
   { "optionTG", "   [-TG (Jedes Generierungsereignis verfolgen.)]"},
@@ -1378,7 +1381,7 @@ public class XSLTErrorResources_de extends ListResourceBundle
   { "noParsermsg4", "Wenn Sie nicht \u00FCber den XML-Parser f\u00FCr Java von IBM verf\u00FCgen, k\u00F6nnen Sie ihn hier herunterladen:"},
   { "noParsermsg5", "IBMs AlphaWorks: http://www.alphaworks.ibm.com/formula/xml"},
   { "optionURIRESOLVER", "   [-URIRESOLVER full class name (URIResolver f\u00FCr die Aufl\u00F6sung von URIs)]"},
-  { "optionENTITYRESOLVER",  "   [-ENTITYRESOLVER full class name (EntityResolver f\u00FCr die Aufl\u00F6sung von Entit\u00E4ten)]"},
+  { "optionENTITYRESOLVER",  "   [-ENTITYRESOLVER full class name (EntityResolver f\u00FCr die Aufl\u00F6sung von Entitys)]"},
   { "optionCONTENTHANDLER",  "   [-CONTENTHANDLER full class name (ContentHandler f\u00FCr die Serialisierung der Ausgabe)]"},
   {  "optionLINENUMBERS",  "   [-L use line numbers for source document]"},
   { "optionSECUREPROCESSING", "   [-SECURE (Feature f\u00FCr die sichere Verarbeitung auf \"true\" setzen.)]"},
@@ -1412,13 +1415,6 @@ public class XSLTErrorResources_de extends ListResourceBundle
 
   };
 
-  /** Get the lookup table for error messages.
-   *
-   * @return The int to message lookup table.
-   */
-  public Object[][] getContents()
-  {
-      return _contents;
   }
   // ================= INFRASTRUCTURE ======================
 

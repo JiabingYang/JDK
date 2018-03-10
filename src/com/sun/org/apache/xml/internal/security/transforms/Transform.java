@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -46,6 +46,7 @@ import com.sun.org.apache.xml.internal.security.transforms.implementations.Trans
 import com.sun.org.apache.xml.internal.security.transforms.implementations.TransformXSLT;
 import com.sun.org.apache.xml.internal.security.utils.Constants;
 import com.sun.org.apache.xml.internal.security.utils.HelperNodeList;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import com.sun.org.apache.xml.internal.security.utils.SignatureElementProxy;
 import com.sun.org.apache.xml.internal.security.utils.XMLUtils;
 import org.w3c.dom.Document;
@@ -181,11 +182,14 @@ public final class Transform extends SignatureElementProxy {
      * class of {@link TransformSpi}
      * @throws AlgorithmAlreadyRegisteredException if specified algorithmURI
      * is already registered
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the transform
      */
     @SuppressWarnings("unchecked")
     public static void register(String algorithmURI, String implementingClass)
         throws AlgorithmAlreadyRegisteredException, ClassNotFoundException,
             InvalidTransformException {
+        JavaUtils.checkRegisterPermission();
         // are we already registered?
         Class<? extends TransformSpi> transformSpi = transformSpiHash.get(algorithmURI);
         if (transformSpi != null) {
@@ -206,9 +210,12 @@ public final class Transform extends SignatureElementProxy {
      * class of {@link TransformSpi}
      * @throws AlgorithmAlreadyRegisteredException if specified algorithmURI
      * is already registered
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the transform
      */
     public static void register(String algorithmURI, Class<? extends TransformSpi> implementingClass)
         throws AlgorithmAlreadyRegisteredException {
+        JavaUtils.checkRegisterPermission();
         // are we already registered?
         Class<? extends TransformSpi> transformSpi = transformSpiHash.get(algorithmURI);
         if (transformSpi != null) {
@@ -263,7 +270,7 @@ public final class Transform extends SignatureElementProxy {
      * @return the URI representation of Transformation algorithm
      */
     public String getURI() {
-        return this._constructionElement.getAttributeNS(null, Constants._ATT_ALGORITHM);
+        return this.constructionElement.getAttributeNS(null, Constants._ATT_ALGORITHM);
     }
 
     /**
@@ -329,7 +336,7 @@ public final class Transform extends SignatureElementProxy {
     private TransformSpi initializeTransform(String algorithmURI, NodeList contextNodes)
         throws InvalidTransformException {
 
-        this._constructionElement.setAttributeNS(null, Constants._ATT_ALGORITHM, algorithmURI);
+        this.constructionElement.setAttributeNS(null, Constants._ATT_ALGORITHM, algorithmURI);
 
         Class<? extends TransformSpi> transformSpiClass = transformSpiHash.get(algorithmURI);
         if (transformSpiClass == null) {
@@ -360,7 +367,7 @@ public final class Transform extends SignatureElementProxy {
         // give it to the current document
         if (contextNodes != null) {
             for (int i = 0; i < contextNodes.getLength(); i++) {
-                this._constructionElement.appendChild(contextNodes.item(i).cloneNode(true));
+                this.constructionElement.appendChild(contextNodes.item(i).cloneNode(true));
             }
         }
         return newTransformSpi;

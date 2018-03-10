@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -37,6 +37,7 @@ import com.sun.org.apache.xml.internal.security.exceptions.XMLSecurityException;
 import com.sun.org.apache.xml.internal.security.signature.XMLSignature;
 import com.sun.org.apache.xml.internal.security.signature.XMLSignatureException;
 import com.sun.org.apache.xml.internal.security.utils.Constants;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -74,7 +75,7 @@ public class SignatureAlgorithm extends Algorithm {
         this.algorithmURI = algorithmURI;
 
         signatureAlgorithm = getSignatureAlgorithmSpi(algorithmURI);
-        signatureAlgorithm.engineGetContextFromElement(this._constructionElement);
+        signatureAlgorithm.engineGetContextFromElement(this.constructionElement);
     }
 
     /**
@@ -92,10 +93,10 @@ public class SignatureAlgorithm extends Algorithm {
         this.algorithmURI = algorithmURI;
 
         signatureAlgorithm = getSignatureAlgorithmSpi(algorithmURI);
-        signatureAlgorithm.engineGetContextFromElement(this._constructionElement);
+        signatureAlgorithm.engineGetContextFromElement(this.constructionElement);
 
         signatureAlgorithm.engineSetHMACOutputLength(hmacOutputLength);
-        ((IntegrityHmac)signatureAlgorithm).engineAddContextToElement(_constructionElement);
+        ((IntegrityHmac)signatureAlgorithm).engineAddContextToElement(constructionElement);
     }
 
     /**
@@ -136,7 +137,7 @@ public class SignatureAlgorithm extends Algorithm {
         }
 
         signatureAlgorithm = getSignatureAlgorithmSpi(algorithmURI);
-        signatureAlgorithm.engineGetContextFromElement(this._constructionElement);
+        signatureAlgorithm.engineGetContextFromElement(this.constructionElement);
     }
 
     /**
@@ -310,22 +311,25 @@ public class SignatureAlgorithm extends Algorithm {
      * @return the URI representation of Transformation algorithm
      */
     public final String getURI() {
-        return _constructionElement.getAttributeNS(null, Constants._ATT_ALGORITHM);
+        return constructionElement.getAttributeNS(null, Constants._ATT_ALGORITHM);
     }
 
     /**
-     * Registers implementing class of the Transform algorithm with algorithmURI
+     * Registers implementing class of the SignatureAlgorithm with algorithmURI
      *
-     * @param algorithmURI algorithmURI URI representation of <code>Transform algorithm</code>.
+     * @param algorithmURI algorithmURI URI representation of <code>SignatureAlgorithm</code>.
      * @param implementingClass <code>implementingClass</code> the implementing class of
      * {@link SignatureAlgorithmSpi}
      * @throws AlgorithmAlreadyRegisteredException if specified algorithmURI is already registered
      * @throws XMLSignatureException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the signature algorithm
      */
     @SuppressWarnings("unchecked")
     public static void register(String algorithmURI, String implementingClass)
        throws AlgorithmAlreadyRegisteredException, ClassNotFoundException,
            XMLSignatureException {
+        JavaUtils.checkRegisterPermission();
         if (log.isLoggable(java.util.logging.Level.FINE)) {
             log.log(java.util.logging.Level.FINE, "Try to register " + algorithmURI + " " + implementingClass);
         }
@@ -352,15 +356,18 @@ public class SignatureAlgorithm extends Algorithm {
     /**
      * Registers implementing class of the Transform algorithm with algorithmURI
      *
-     * @param algorithmURI algorithmURI URI representation of <code>Transform algorithm</code>.
+     * @param algorithmURI algorithmURI URI representation of <code>SignatureAlgorithm</code>.
      * @param implementingClass <code>implementingClass</code> the implementing class of
      * {@link SignatureAlgorithmSpi}
      * @throws AlgorithmAlreadyRegisteredException if specified algorithmURI is already registered
      * @throws XMLSignatureException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the signature algorithm
      */
     public static void register(String algorithmURI, Class<? extends SignatureAlgorithmSpi> implementingClass)
        throws AlgorithmAlreadyRegisteredException, ClassNotFoundException,
            XMLSignatureException {
+        JavaUtils.checkRegisterPermission();
         if (log.isLoggable(java.util.logging.Level.FINE)) {
             log.log(java.util.logging.Level.FINE, "Try to register " + algorithmURI + " " + implementingClass);
         }
@@ -382,6 +389,9 @@ public class SignatureAlgorithm extends Algorithm {
     public static void registerDefaultAlgorithms() {
         algorithmHash.put(
             XMLSignature.ALGO_ID_SIGNATURE_DSA, SignatureDSA.class
+        );
+        algorithmHash.put(
+            XMLSignature.ALGO_ID_SIGNATURE_DSA_SHA256, SignatureDSA.SHA256.class
         );
         algorithmHash.put(
             XMLSignature.ALGO_ID_SIGNATURE_RSA_SHA1, SignatureBaseRSA.SignatureRSASHA1.class
@@ -408,6 +418,15 @@ public class SignatureAlgorithm extends Algorithm {
         );
         algorithmHash.put(
             XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA1, SignatureECDSA.SignatureECDSASHA1.class
+        );
+        algorithmHash.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA256, SignatureECDSA.SignatureECDSASHA256.class
+        );
+        algorithmHash.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA384, SignatureECDSA.SignatureECDSASHA384.class
+        );
+        algorithmHash.put(
+            XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA512, SignatureECDSA.SignatureECDSASHA512.class
         );
         algorithmHash.put(
             XMLSignature.ALGO_ID_MAC_HMAC_NOT_RECOMMENDED_MD5, IntegrityHmac.IntegrityHmacMD5.class

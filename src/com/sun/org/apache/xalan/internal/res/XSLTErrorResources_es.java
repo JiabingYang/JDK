@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
- * Copyright 1999-2004 The Apache Software Foundation.
+ * Copyright 1999-2005 The Apache Software Foundation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XSLTErrorResources_es.java,v 1.2.4.1 2005/09/13 10:16:43 pvedula Exp $
  */
 package com.sun.org.apache.xalan.internal.res;
 
@@ -471,7 +468,13 @@ public class XSLTErrorResources_es extends ListResourceBundle
 
   // Error messages...
 
-  private static final Object[][] _contents = new Object[][] {
+  /** Get the lookup table for error messages.
+    *
+    * @return The message lookup table.
+    */
+  public Object[][] getContents()
+  {
+      return new Object[][] {
 
   /** Error message ID that has a null message, but takes in a single object.    */
   {"ER0000" , "{0}" },
@@ -1359,7 +1362,7 @@ public class XSLTErrorResources_es extends ListResourceBundle
   {  "optionQ", "   [-Q  (Modo Silencioso)]"},
   {  "optionLF", "   [-LF (Utilizar saltos de l\u00EDnea s\u00F3lo en la salida {el valor por defecto es CR/LF})]"},
   {  "optionCR", "   [-CR (Utilizar retornos de carro s\u00F3lo en la salida {el valor por defecto es CR/LF})]"},
-  { "optionESCAPE", "   [-ESCAPE (Caracteres para introducir escape {el valor por defecto es <>&\"\'\\r\\n}]"},
+  { "optionESCAPE", "   [-ESCAPE (Caracteres para introducir escape {el valor por defecto es <>&\"'\\r\\n}]"},
   { "optionINDENT", "   [-INDENT (Control del n\u00FAmero de espacios para el sangrado {el valor por defecto es 0})]"},
   { "optionTT", "   [-TT (Rastrear las plantillas como si se estuviesen llamando.)]"},
   { "optionTG", "   [-TG (Rastrear cada evento de generaci\u00F3n.)]"},
@@ -1412,13 +1415,6 @@ public class XSLTErrorResources_es extends ListResourceBundle
 
   };
 
-  /** Get the lookup table for error messages.
-   *
-   * @return The int to message lookup table.
-   */
-  public Object[][] getContents()
-  {
-      return _contents;
   }
   // ================= INFRASTRUCTURE ======================
 

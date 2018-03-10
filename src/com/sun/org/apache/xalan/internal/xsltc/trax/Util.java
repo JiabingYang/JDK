@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -23,12 +23,12 @@
 
 package com.sun.org.apache.xalan.internal.xsltc.trax;
 
+import com.sun.org.apache.xalan.internal.XalanConstants;
 import java.io.InputStream;
 import java.io.Reader;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import javax.xml.stream.XMLEventReader;
@@ -38,11 +38,11 @@ import javax.xml.transform.Source;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.sax.SAXSource;
-import javax.xml.transform.stax.StAXResult;
 import javax.xml.transform.stax.StAXSource;
 import javax.xml.transform.stream.StreamSource;
 
 import com.sun.org.apache.xalan.internal.utils.FactoryImpl;
+import com.sun.org.apache.xalan.internal.utils.XMLSecurityManager;
 import com.sun.org.apache.xalan.internal.xsltc.compiler.XSLTC;
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ErrorMsg;
 
@@ -105,6 +105,13 @@ public final class Util {
                     if (reader == null) {
                        try {
                            reader= XMLReaderFactory.createXMLReader();
+                           try {
+                                reader.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,
+                                            xsltc.isSecureProcessing());
+                           } catch (SAXNotRecognizedException e) {
+                                XMLSecurityManager.printWarning(reader.getClass().getName(),
+                                        XMLConstants.FEATURE_SECURE_PROCESSING, e);
+                           }
                        } catch (Exception e ) {
                            try {
 
@@ -140,10 +147,28 @@ public final class Util {
                         reader.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD,
                                    xsltc.getProperty(XMLConstants.ACCESS_EXTERNAL_DTD));
                     } catch (SAXNotRecognizedException e) {
-                        System.err.println("Warning:  " + reader.getClass().getName() + ": "
-                                + e.getMessage());
+                        XMLSecurityManager.printWarning(reader.getClass().getName(),
+                                XMLConstants.ACCESS_EXTERNAL_DTD, e);
                     }
 
+                    String lastProperty = "";
+                    try {
+                        XMLSecurityManager securityManager =
+                                (XMLSecurityManager)xsltc.getProperty(XalanConstants.SECURITY_MANAGER);
+                        if (securityManager != null) {
+                            for (XMLSecurityManager.Limit limit : XMLSecurityManager.Limit.values()) {
+                                lastProperty = limit.apiProperty();
+                                reader.setProperty(lastProperty,
+                                        securityManager.getLimitValueAsString(limit));
+                            }
+                            if (securityManager.printEntityCountInfo()) {
+                                lastProperty = XalanConstants.JDK_ENTITY_COUNT_INFO;
+                                reader.setProperty(XalanConstants.JDK_ENTITY_COUNT_INFO, XalanConstants.JDK_YES);
+                            }
+                        }
+                    } catch (SAXException se) {
+                        XMLSecurityManager.printWarning(reader.getClass().getName(), lastProperty, se);
+                    }
                     xsltc.setXMLReader(reader);
                 }catch (SAXNotRecognizedException snre ) {
                   throw new TransformerConfigurationException

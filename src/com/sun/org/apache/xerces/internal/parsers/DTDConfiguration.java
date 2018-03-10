@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -185,9 +185,12 @@ public class DTDConfiguration
     protected static final String LOCALE =
         Constants.XERCES_PROPERTY_PREFIX + Constants.LOCALE_PROPERTY;
 
-    /** Property identifier: Security property manager. */
-    protected static final String XML_SECURITY_PROPERTY_MANAGER =
-            Constants.XML_SECURITY_PROPERTY_MANAGER;
+      /** Property identifier: Security property manager. */
+      protected static final String XML_SECURITY_PROPERTY_MANAGER =
+              Constants.XML_SECURITY_PROPERTY_MANAGER;
+
+     /** Property identifier: Security manager. */
+     private static final String SECURITY_MANAGER = Constants.SECURITY_MANAGER;
 
     // debugging
 
@@ -334,6 +337,7 @@ public class DTDConfiguration
             JAXP_SCHEMA_SOURCE,
             JAXP_SCHEMA_LANGUAGE,
             LOCALE,
+            SECURITY_MANAGER,
             XML_SECURITY_PROPERTY_MANAGER
         };
         addRecognizedProperties(recognizedProperties);

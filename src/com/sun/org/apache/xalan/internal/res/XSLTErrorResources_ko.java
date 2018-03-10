@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
- * Copyright 1999-2004 The Apache Software Foundation.
+ * Copyright 1999-2005 The Apache Software Foundation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XSLTErrorResources_ko.java,v 1.2.4.1 2005/09/13 11:03:57 pvedula Exp $
  */
 package com.sun.org.apache.xalan.internal.res;
 
@@ -471,7 +468,13 @@ public class XSLTErrorResources_ko extends ListResourceBundle
 
   // Error messages...
 
-  private static final Object[][] _contents = new Object[][] {
+  /** Get the lookup table for error messages.
+    *
+    * @return The message lookup table.
+    */
+  public Object[][] getContents()
+  {
+      return new Object[][] {
 
   /** Error message ID that has a null message, but takes in a single object.    */
   {"ER0000" , "{0}" },
@@ -585,7 +588,7 @@ public class XSLTErrorResources_ko extends ListResourceBundle
      "\uC2A4\uD0C0\uC77C\uC2DC\uD2B8 \uD30C\uC77C\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC74C: {0}"},
 
     { ER_IOEXCEPTION,
-      "\uC2A4\uD0C0\uC77C\uC2DC\uD2B8 \uD30C\uC77C\uC5D0 IO \uC608\uC678 \uC0AC\uD56D \uBC1C\uC0DD: {0}"},
+      "\uC2A4\uD0C0\uC77C\uC2DC\uD2B8 \uD30C\uC77C\uC5D0 IO \uC608\uC678\uC0AC\uD56D \uBC1C\uC0DD: {0}"},
 
     { ER_NO_HREF_ATTRIB,
       "(StylesheetHandler) {0}\uC5D0 \uB300\uD55C href \uC18D\uC131\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."},
@@ -711,7 +714,7 @@ public class XSLTErrorResources_ko extends ListResourceBundle
       "processStylesheet\uB97C \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4!"},
 
     { ER_SAX_EXCEPTION,
-     "SAX \uC608\uC678 \uC0AC\uD56D"},
+     "SAX \uC608\uC678\uC0AC\uD56D"},
 
 //  add this message to fix bug 21478
     { ER_FUNCTION_NOT_SUPPORTED,
@@ -1319,7 +1322,7 @@ public class XSLTErrorResources_ko extends ListResourceBundle
   {  "help_language",  "ko" },
   {  "language",  "ko" },
   { "BAD_CODE", "createMessage\uC5D0 \uB300\uD55C \uB9E4\uAC1C\uBCC0\uC218\uAC00 \uBC94\uC704\uB97C \uBC97\uC5B4\uB0AC\uC2B5\uB2C8\uB2E4."},
-  {  "FORMAT_FAILED", "messageFormat \uD638\uCD9C \uC911 \uC608\uC678 \uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
+  {  "FORMAT_FAILED", "messageFormat \uD638\uCD9C \uC911 \uC608\uC678\uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
   {  "version", ">>>>>>> Xalan \uBC84\uC804 "},
   {  "version2",  "<<<<<<<"},
   {  "yes", "\uC608"},
@@ -1359,7 +1362,7 @@ public class XSLTErrorResources_ko extends ListResourceBundle
   {  "optionQ", "   [-Q(\uC790\uB3D9 \uBAA8\uB4DC)]"},
   {  "optionLF", "   [-LF(\uCD9C\uB825\uC5D0\uB9CC \uC904 \uBC14\uAFC8 \uC0AC\uC6A9 {\uAE30\uBCF8\uAC12: CR/LF})]"},
   {  "optionCR", "   [-CR(\uCD9C\uB825\uC5D0\uB9CC \uCE90\uB9AC\uC9C0 \uB9AC\uD134 \uC0AC\uC6A9 {\uAE30\uBCF8\uAC12: CR/LF})]"},
-  { "optionESCAPE", "   [-ESCAPE(\uC774\uC2A4\uCF00\uC774\uD504 \uBB38\uC790 {\uAE30\uBCF8\uAC12: <>&\"\'\\r\\n}]"},
+  { "optionESCAPE", "   [-ESCAPE(\uC774\uC2A4\uCF00\uC774\uD504 \uBB38\uC790 {\uAE30\uBCF8\uAC12: <>&\"'\\r\\n}]"},
   { "optionINDENT", "   [-INDENT(\uB4E4\uC5EC \uC4F8 \uACF5\uBC31 \uC218 \uC81C\uC5B4 {\uAE30\uBCF8\uAC12: 0})]"},
   { "optionTT", "   [-TT(\uD15C\uD50C\uB9AC\uD2B8 \uD638\uCD9C \uC2DC \uCD94\uC801)]"},
   { "optionTG", "   [-TG(\uAC01 \uC0DD\uC131 \uC774\uBCA4\uD2B8 \uCD94\uC801)]"},
@@ -1412,13 +1415,6 @@ public class XSLTErrorResources_ko extends ListResourceBundle
 
   };
 
-  /** Get the lookup table for error messages.
-   *
-   * @return The int to message lookup table.
-   */
-  public Object[][] getContents()
-  {
-      return _contents;
   }
   // ================= INFRASTRUCTURE ======================
 

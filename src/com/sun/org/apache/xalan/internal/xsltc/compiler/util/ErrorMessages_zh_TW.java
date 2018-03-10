@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: ErrorMessages_zh_TW.java,v 1.2.4.1 2005/09/15 10:16:08 pvedula Exp $
  */
 
 package com.sun.org.apache.xalan.internal.xsltc.compiler.util;
@@ -90,7 +87,13 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
  */
 
     // These message should be read from a locale-specific resource bundle
-    private static final Object[][] _contents =  new Object[][] {
+    /** Get the lookup table for error messages.
+     *
+     * @return The message lookup table.
+     */
+    public Object[][] getContents()
+    {
+      return new Object[][] {
         {ErrorMsg.MULTIPLE_STYLESHEET_ERR,
         "\u76F8\u540C\u6A94\u6848\u4E2D\u5B9A\u7FA9\u4E86\u8D85\u904E\u4E00\u500B\u6A23\u5F0F\u8868\u3002"},
 
@@ -447,7 +450,7 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
          * Note to translators:  access to the stylesheet target is denied
          */
         {ErrorMsg.ACCESSING_XSLT_TARGET_ERR,
-        "Could not read stylesheet target ''{0}'', because ''{1}'' access is not allowed."},
+        "\u7121\u6CD5\u8B80\u53D6\u6A23\u5F0F\u8868\u76EE\u6A19 ''{0}''\uFF0C\u56E0\u70BA accessExternalStylesheet \u5C6C\u6027\u8A2D\u5B9A\u7684\u9650\u5236\uFF0C\u6240\u4EE5\u4E0D\u5141\u8A31 ''{1}'' \u5B58\u53D6\u3002"},
 
         /*
          * Note to translators:  This message represents an internal error in
@@ -594,6 +597,9 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
         {ErrorMsg.JAXP_INVALID_ATTR_ERR,
         "TransformerFactory \u7121\u6CD5\u8FA8\u8B58\u5C6C\u6027 ''{0}''\u3002"},
 
+        {ErrorMsg.JAXP_INVALID_ATTR_VALUE_ERR,
+        "\u70BA ''{0}'' \u5C6C\u6027\u6307\u5B9A\u7684\u503C\u4E0D\u6B63\u78BA\u3002"},
+
         /*
          * Note to translators:  "setResult()" and "startDocument()" are Java
          * method names that should not be translated.
@@ -676,7 +682,7 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
          * documentation.
          */
         {ErrorMsg.COMPILE_USAGE_STR,
-        "\u6982\u8981\n   java com.sun.org.apache.xalan.internal.xsltc.cmdline.Compile [-o <output>]\n      [-d <directory>] [-j <jarfile>] [-p <package>]\n      [-n] [-x] [-u] [-v] [-h] { <stylesheet> | -i }\n\n\u9078\u9805\n   -o <output>    \u6307\u6D3E\u540D\u7A31 <output> \u81F3\u7522\u751F\u7684\n                  translet\u3002\u6839\u64DA\u9810\u8A2D\uFF0Ctranslet \u540D\u7A31\n                  \u884D\u751F\u81EA <stylesheet> \u540D\u7A31\u3002  \u82E5\u7DE8\u8B6F\n                  \u591A\u500B\u6A23\u5F0F\u8868\uFF0C\u5C07\u5FFD\u7565\u6B64\u9078\u9805\u3002\n   -d <directory> \u6307\u5B9A translet \u7684\u76EE\u7684\u5730\u76EE\u9304\n   -j <jarfile>   \u5C01\u88DD translet \u985E\u5225\u6210\u70BA jar \u6A94\u6848\uFF0C\n                  \u540D\u7A31\u6307\u5B9A\u70BA <jarfile>\n   -p <package>   \u6307\u5B9A\u6240\u6709\u7522\u751F\u7684 translet \u985E\u5225\u7684\u5957\u88DD\u7A0B\u5F0F\n                  \u540D\u7A31\u524D\u7F6E\u78BC\u3002\n   -n             \u555F\u7528\u6A23\u677F\u5167\u5D4C (\u9810\u8A2D\u884C\u70BA\u4E00\u822C\u800C\u8A00\n                  \u8F03\u4F73)\u3002\n   -x             \u958B\u555F\u984D\u5916\u7684\u9664\u932F\u8A0A\u606F\u8F38\u51FA\n   -u             \u89E3\u8B6F <stylesheet> \u5F15\u6578\u70BA URL\n   -i             \u5F37\u5236\u7DE8\u8B6F\u5668\u5F9E stdin \u8B80\u53D6\u6A23\u5F0F\u8868\n   -v             \u5217\u5370\u7DE8\u8B6F\u5668\u7248\u672C\n   -h             \u5217\u5370\u6B64\u7528\u6CD5\u6558\u8FF0\n"},
+        "\u6982\u8981\n   java com.sun.org.apache.xalan.internal.xsltc.cmdline.Compile [-o <output>]\n      [-d <directory>] [-j <jarfile>] [-p <package>]\n      [-n] [-x] [-u] [-v] [-h] { <stylesheet> | -i }\n\n\u9078\u9805\n   -o <output>    \u6307\u6D3E\u540D\u7A31 <output> \u81F3\u7522\u751F\u7684\n                  translet\u3002\u6839\u64DA\u9810\u8A2D\uFF0Ctranslet \u540D\u7A31\n                  \u884D\u751F\u81EA <stylesheet> \u540D\u7A31\u3002\u82E5\u7DE8\u8B6F\n                  \u591A\u500B\u6A23\u5F0F\u8868\uFF0C\u5C07\u5FFD\u7565\u6B64\u9078\u9805\u3002\n   -d <directory> \u6307\u5B9A translet \u7684\u76EE\u7684\u5730\u76EE\u9304\n   -j <jarfile>   \u5C01\u88DD translet \u985E\u5225\u6210\u70BA jar \u6A94\u6848\uFF0C\n                  \u540D\u7A31\u6307\u5B9A\u70BA <jarfile>\n   -p <package>   \u6307\u5B9A\u6240\u6709\u7522\u751F\u7684 translet \u985E\u5225\u7684\u5957\u88DD\u7A0B\u5F0F\n                  \u540D\u7A31\u524D\u7F6E\u78BC\u3002\n   -n             \u555F\u7528\u6A23\u677F\u5167\u5D4C (\u9810\u8A2D\u884C\u70BA\u4E00\u822C\u800C\u8A00\n                  \u8F03\u4F73)\u3002\n   -x             \u958B\u555F\u984D\u5916\u7684\u9664\u932F\u8A0A\u606F\u8F38\u51FA\n   -u             \u89E3\u8B6F <stylesheet> \u5F15\u6578\u70BA URL\n   -i             \u5F37\u5236\u7DE8\u8B6F\u5668\u5F9E stdin \u8B80\u53D6\u6A23\u5F0F\u8868\n   -v             \u5217\u5370\u7DE8\u8B6F\u5668\u7248\u672C\n   -h             \u5217\u5370\u6B64\u7528\u6CD5\u6558\u8FF0\n"},
 
         /*
          * Note to translators:  This message contains usage information for a
@@ -771,7 +777,7 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
          * it the same amount as the first in English.
          */
         {ErrorMsg.WARNING_PLUS_WRAPPED_MSG,
-        "\u8B66\u544A:  ''{0}''\n       :{1}"},
+        "WARNING:  ''{0}''\n       :{1}"},
 
         /*
          * Note to translators:  This message is used to indicate the severity
@@ -787,7 +793,7 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
          * it the same amount as the first in English.
          */
         {ErrorMsg.FATAL_ERR_PLUS_WRAPPED_MSG,
-        "\u56B4\u91CD\u932F\u8AA4:  ''{0}''\n           :{1}"},
+        "FATAL ERROR:  ''{0}''\n           :{1}"},
 
         /*
          * Note to translators:  This message is used to indicate the severity
@@ -803,7 +809,7 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
          * it the same amount as the first in English.
          */
         {ErrorMsg.ERROR_PLUS_WRAPPED_MSG,
-        "\u932F\u8AA4:  ''{0}''\n     :{1}"},
+        "ERROR:  ''{0}''\n     :{1}"},
 
         /*
          * Note to translators:  This message is used to indicate the severity
@@ -910,15 +916,59 @@ public class ErrorMessages_zh_TW extends ListResourceBundle {
         "\u7121\u6CD5\u5728\u6B64 TransformerFactory \u4E0A\u8A2D\u5B9A\u529F\u80FD ''{0}''\u3002"},
 
         {ErrorMsg.JAXP_SECUREPROCESSING_FEATURE,
-        "FEATURE_SECURE_PROCESSING: \u5B89\u5168\u7BA1\u7406\u7A0B\u5F0F\u5B58\u5728\u6642\uFF0C\u7121\u6CD5\u5C07\u529F\u80FD\u8A2D\u70BA\u507D\u3002"}
+        "FEATURE_SECURE_PROCESSING: \u5B89\u5168\u7BA1\u7406\u7A0B\u5F0F\u5B58\u5728\u6642\uFF0C\u7121\u6CD5\u5C07\u529F\u80FD\u8A2D\u70BA\u507D\u3002"},
+
+        /*
+         * Note to translators:  This message describes an internal error in the
+         * processor.  The term "byte code" is a Java technical term for the
+         * executable code in a Java method, and "try-catch-finally block"
+         * refers to the Java keywords with those names.  "Outlined" is a
+         * technical term internal to XSLTC and should not be translated.
+         */
+        {ErrorMsg.OUTLINE_ERR_TRY_CATCH,
+         "\u5167\u90E8 XSLTC \u932F\u8AA4:  \u7522\u751F\u7684\u4F4D\u5143\u7D44\u78BC\u5305\u542B try-catch-finally \u5340\u584A\uFF0C\u7121\u6CD5\u52A0\u4EE5 outlined."},
+
+        /*
+         * Note to translators:  This message describes an internal error in the
+         * processor.  The terms "OutlineableChunkStart" and
+         * "OutlineableChunkEnd" are the names of classes internal to XSLTC and
+         * should not be translated.  The message indicates that for every
+         * "start" there must be a corresponding "end", and vice versa, and
+         * that if one of a pair of "start" and "end" appears between another
+         * pair of corresponding "start" and "end", then the other half of the
+         * pair must also be between that same enclosing pair.
+         */
+        {ErrorMsg.OUTLINE_ERR_UNBALANCED_MARKERS,
+         "\u5167\u90E8 XSLTC \u932F\u8AA4:  OutlineableChunkStart \u548C OutlineableChunkEnd \u6A19\u8A18\u5FC5\u9808\u6210\u5C0D\u51FA\u73FE\uFF0C\u4E26\u4F7F\u7528\u6B63\u78BA\u7684\u5DE2\u72C0\u7D50\u69CB\u3002"},
+
+        /*
+         * Note to translators:  This message describes an internal error in the
+         * processor.  The term "byte code" is a Java technical term for the
+         * executable code in a Java method.  The "method" that is being
+         * referred to is a Java method in a translet that XSLTC is generating
+         * in processing a stylesheet.  The "instruction" that is being
+         * referred to is one of the instrutions in the Java byte code in that
+         * method.  "Outlined" is a technical term internal to XSLTC and
+         * should not be translated.
+         */
+        {ErrorMsg.OUTLINE_ERR_DELETED_TARGET,
+         "\u5167\u90E8 XSLTC \u932F\u8AA4:  \u539F\u59CB\u65B9\u6CD5\u4E2D\u4ECD\u7136\u53C3\u7167\u5C6C\u65BC outlined \u4F4D\u5143\u7D44\u78BC\u5340\u584A\u4E00\u90E8\u5206\u7684\u6307\u793A\u3002"
+        },
+
+
+        /*
+         * Note to translators:  This message describes an internal error in the
+         * processor.  The "method" that is being referred to is a Java method
+         * in a translet that XSLTC is generating.
+         *
+         */
+        {ErrorMsg.OUTLINE_ERR_METHOD_TOO_BIG,
+         "\u5167\u90E8 XSLTC \u932F\u8AA4:  translet \u4E2D\u7684\u65B9\u6CD5\u8D85\u904E Java \u865B\u64EC\u6A5F\u5668\u5C0D\u65BC\u65B9\u6CD5\u9577\u5EA6 64 KB \u7684\u9650\u5236\u3002\u9019\u901A\u5E38\u662F\u56E0\u70BA\u6A23\u5F0F\u8868\u4E2D\u6709\u975E\u5E38\u5927\u7684\u6A23\u677F\u3002\u8ACB\u5617\u8A66\u91CD\u65B0\u7D44\u7E54\u60A8\u7684\u6A23\u5F0F\u8868\u4EE5\u4F7F\u7528\u8F03\u5C0F\u7684\u6A23\u677F\u3002"
+        },
+
+         {ErrorMsg.DESERIALIZE_TRANSLET_ERR, "\u555F\u7528 Java \u5B89\u5168\u6642\uFF0C\u6703\u505C\u7528\u9084\u539F\u5E8F\u5217\u5316 TemplatesImpl \u7684\u652F\u63F4\u3002\u5C07 jdk.xml.enableTemplatesImplDeserialization \u7CFB\u7D71\u5C6C\u6027\u8A2D\u70BA\u771F\u5373\u53EF\u8986\u5BEB\u6B64\u8A2D\u5B9A\u3002"}
+
     };
 
-    /** Get the lookup table for error messages.
-     *
-     * @return The message lookup table.
-     */
-    public Object[][] getContents()
-    {
-        return _contents;
     }
 }

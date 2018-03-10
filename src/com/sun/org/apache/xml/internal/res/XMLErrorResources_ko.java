@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XMLErrorResources_ko.java,v 1.2.4.1 2005/09/15 07:45:42 suresh_emailid Exp $
  */
 package com.sun.org.apache.xml.internal.res;
 
@@ -179,7 +176,7 @@ public class XMLErrorResources_ko extends ListResourceBundle
   // Error messages...
 
   /** The lookup table for error messages.   */
-  private static final Object[][] _contents = {
+  private static final Object[][] contents = {
 
   /** Error message ID that has a null message, but takes in a single object.    */
     {"ER0000" , "{0}" },
@@ -254,7 +251,7 @@ public class XMLErrorResources_ko extends ListResourceBundle
        "\uAD6C\uBB38 \uBD84\uC11D\uAE30\uB97C \uCD08\uAE30\uD654\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."},
 
     { ER_EXCEPTION_CREATING_POOL,
-       "\uD480\uC5D0 \uB300\uD55C \uC0C8 \uC778\uC2A4\uD134\uC2A4\uB97C \uC0DD\uC131\uD558\uB294 \uC911 \uC608\uC678 \uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
+       "\uD480\uC5D0 \uB300\uD55C \uC0C8 \uC778\uC2A4\uD134\uC2A4\uB97C \uC0DD\uC131\uD558\uB294 \uC911 \uC608\uC678\uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
 
     { ER_PATH_CONTAINS_INVALID_ESCAPE_SEQUENCE,
        "\uACBD\uB85C\uC5D0 \uBD80\uC801\uD569\uD55C \uC774\uC2A4\uCF00\uC774\uD504 \uC2DC\uD000\uC2A4\uAC00 \uD3EC\uD568\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4."},
@@ -377,7 +374,7 @@ public class XMLErrorResources_ko extends ListResourceBundle
       "\uC774\uB984\uC740 \uCF5C\uB860\uC73C\uB85C \uC2DC\uC791\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."},
 
     { "BAD_CODE", "createMessage\uC5D0 \uB300\uD55C \uB9E4\uAC1C\uBCC0\uC218\uAC00 \uBC94\uC704\uB97C \uBC97\uC5B4\uB0AC\uC2B5\uB2C8\uB2E4."},
-    { "FORMAT_FAILED", "messageFormat \uD638\uCD9C \uC911 \uC608\uC678 \uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
+    { "FORMAT_FAILED", "messageFormat \uD638\uCD9C \uC911 \uC608\uC678\uC0AC\uD56D\uC774 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4."},
     { "line", "\uD589 \uBC88\uD638"},
     { "column","\uC5F4 \uBC88\uD638"},
 
@@ -447,7 +444,7 @@ public class XMLErrorResources_ko extends ListResourceBundle
    */
 
     protected Object[][] getContents() {
-        return _contents;
+        return contents;
     }
 
 }

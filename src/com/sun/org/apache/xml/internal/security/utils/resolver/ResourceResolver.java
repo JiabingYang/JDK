@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sun.org.apache.xml.internal.security.signature.XMLSignatureInput;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import com.sun.org.apache.xml.internal.security.utils.resolver.implementations.ResolverDirectHTTP;
 import com.sun.org.apache.xml.internal.security.utils.resolver.implementations.ResolverFragment;
 import com.sun.org.apache.xml.internal.security.utils.resolver.implementations.ResolverLocalFilesystem;
@@ -85,8 +86,14 @@ public class ResourceResolver {
      * @throws ResourceResolverException
      */
     public static final ResourceResolver getInstance(
-        Attr uri, String baseURI, boolean secureValidation
+        Attr uriAttr, String baseURI, boolean secureValidation
     ) throws ResourceResolverException {
+        ResourceResolverContext context = new ResourceResolverContext(uriAttr, baseURI, secureValidation);
+        return internalGetInstance(context);
+    }
+
+    private static <N> ResourceResolver internalGetInstance(ResourceResolverContext context)
+            throws ResourceResolverException {
         synchronized (resolverList) {
             for (ResourceResolver resolver : resolverList) {
                 ResourceResolver resolverTmp = resolver;
@@ -95,9 +102,9 @@ public class ResourceResolver {
                         resolverTmp =
                             new ResourceResolver(resolver.resolverSpi.getClass().newInstance());
                     } catch (InstantiationException e) {
-                        throw new ResourceResolverException("", e, uri, baseURI);
+                        throw new ResourceResolverException("", e, context.attr, context.baseUri);
                     } catch (IllegalAccessException e) {
-                        throw new ResourceResolverException("", e, uri, baseURI);
+                        throw new ResourceResolverException("", e, context.attr, context.baseUri);
                     }
                 }
 
@@ -107,15 +114,14 @@ public class ResourceResolver {
                     );
                 }
 
-                resolverTmp.resolverSpi.secureValidation = secureValidation;
-                if ((resolverTmp != null) && resolverTmp.canResolve(uri, baseURI)) {
+                if ((resolverTmp != null) && resolverTmp.canResolve(context)) {
                     // Check to see whether the Resolver is allowed
-                    if (secureValidation
+                    if (context.secureValidation
                         && (resolverTmp.resolverSpi instanceof ResolverLocalFilesystem
                             || resolverTmp.resolverSpi instanceof ResolverDirectHTTP)) {
                         Object exArgs[] = { resolverTmp.resolverSpi.getClass().getName() };
                         throw new ResourceResolverException(
-                            "signature.Reference.ForbiddenResolver", exArgs, uri, baseURI
+                            "signature.Reference.ForbiddenResolver", exArgs, context.attr, context.baseUri
                         );
                     }
                     return resolverTmp;
@@ -123,9 +129,10 @@ public class ResourceResolver {
             }
         }
 
-        Object exArgs[] = { ((uri != null) ? uri.getNodeValue() : "null"), baseURI };
+        Object exArgs[] = { ((context.uriToResolve != null)
+                ? context.uriToResolve : "null"), context.baseUri };
 
-        throw new ResourceResolverException("utils.resolver.noClass", exArgs, uri, baseURI);
+        throw new ResourceResolverException("utils.resolver.noClass", exArgs, context.attr, context.baseUri);
     }
 
     /**
@@ -165,6 +172,8 @@ public class ResourceResolver {
             );
         }
 
+        ResourceResolverContext context = new ResourceResolverContext(uri, baseURI, secureValidation);
+
         // first check the individual Resolvers
         if (individualResolvers != null) {
             for (int i = 0; i < individualResolvers.size(); i++) {
@@ -176,15 +185,14 @@ public class ResourceResolver {
                         log.log(java.util.logging.Level.FINE, "check resolvability by class " + currentClass);
                     }
 
-                    resolver.resolverSpi.secureValidation = secureValidation;
-                    if (resolver.canResolve(uri, baseURI)) {
+                    if (resolver.canResolve(context)) {
                         return resolver;
                     }
                 }
             }
         }
 
-        return getInstance(uri, baseURI, secureValidation);
+        return internalGetInstance(context);
     }
 
     /**
@@ -192,9 +200,12 @@ public class ResourceResolver {
      * the class cannot be registered.
      *
      * @param className the name of the ResourceResolverSpi class to be registered
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register a resource resolver
      */
     @SuppressWarnings("unchecked")
     public static void register(String className) {
+        JavaUtils.checkRegisterPermission();
         try {
             Class<ResourceResolverSpi> resourceResolverClass =
                 (Class<ResourceResolverSpi>) Class.forName(className);
@@ -209,9 +220,12 @@ public class ResourceResolver {
      * list. This method logs a warning if the class cannot be registered.
      *
      * @param className the name of the ResourceResolverSpi class to be registered
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register a resource resolver
      */
     @SuppressWarnings("unchecked")
     public static void registerAtStart(String className) {
+        JavaUtils.checkRegisterPermission();
         try {
             Class<ResourceResolverSpi> resourceResolverClass =
                 (Class<ResourceResolverSpi>) Class.forName(className);
@@ -226,8 +240,11 @@ public class ResourceResolver {
      * cannot be registered.
      * @param className
      * @param start
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register a resource resolver
      */
     public static void register(Class<? extends ResourceResolverSpi> className, boolean start) {
+        JavaUtils.checkRegisterPermission();
         try {
             ResourceResolverSpi resourceResolverSpi = className.newInstance();
             register(resourceResolverSpi, start);
@@ -243,8 +260,11 @@ public class ResourceResolver {
      * cannot be registered.
      * @param resourceResolverSpi
      * @param start
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register a resource resolver
      */
     public static void register(ResourceResolverSpi resourceResolverSpi, boolean start) {
+        JavaUtils.checkRegisterPermission();
         synchronized(resolverList) {
             if (start) {
                 resolverList.add(0, new ResourceResolver(resourceResolverSpi));
@@ -270,6 +290,15 @@ public class ResourceResolver {
     }
 
     /**
+     * @deprecated New clients should use {@link #resolve(Attr, String, boolean)}
+     */
+    @Deprecated
+    public XMLSignatureInput resolve(Attr uri, String baseURI)
+        throws ResourceResolverException {
+        return resolve(uri, baseURI, true);
+    }
+
+    /**
      * Method resolve
      *
      * @param uri
@@ -278,9 +307,10 @@ public class ResourceResolver {
      *
      * @throws ResourceResolverException
      */
-    public XMLSignatureInput resolve(Attr uri, String baseURI)
+    public XMLSignatureInput resolve(Attr uri, String baseURI, boolean secureValidation)
         throws ResourceResolverException {
-        return resolverSpi.engineResolve(uri, baseURI);
+        ResourceResolverContext context = new ResourceResolverContext(uri, baseURI, secureValidation);
+        return resolverSpi.engineResolveURI(context);
     }
 
     /**
@@ -338,7 +368,7 @@ public class ResourceResolver {
      * @param baseURI
      * @return true if it can resolve the uri
      */
-    private boolean canResolve(Attr uri, String baseURI) {
-        return resolverSpi.engineCanResolve(uri, baseURI);
+    private boolean canResolve(ResourceResolverContext context) {
+        return this.resolverSpi.engineCanResolveURI(context);
     }
 }

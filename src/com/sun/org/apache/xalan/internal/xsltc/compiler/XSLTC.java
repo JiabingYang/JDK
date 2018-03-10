@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 /*
- * Copyright 2001-2004 The Apache Software Foundation.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -23,6 +23,15 @@
 
 package com.sun.org.apache.xalan.internal.xsltc.compiler;
 
+import com.sun.org.apache.bcel.internal.classfile.JavaClass;
+import com.sun.org.apache.xalan.internal.XalanConstants;
+import com.sun.org.apache.xalan.internal.utils.FeatureManager;
+import com.sun.org.apache.xalan.internal.utils.FeatureManager.Feature;
+import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
+import com.sun.org.apache.xalan.internal.utils.XMLSecurityManager;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ErrorMsg;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.util.Util;
+import com.sun.org.apache.xml.internal.dtm.DTM;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,9 +39,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
@@ -40,15 +50,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import javax.xml.XMLConstants;
-
-import com.sun.org.apache.bcel.internal.classfile.JavaClass;
-import com.sun.org.apache.xalan.internal.XalanConstants;
-import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ErrorMsg;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.Util;
-import com.sun.org.apache.xml.internal.dtm.DTM;
-
-import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
@@ -86,14 +87,14 @@ public final class XSLTC {
     // Name index tables
     private int       _nextGType;  // Next available element type
     private Vector    _namesIndex; // Index of all registered QNames
-    private Hashtable _elements;   // Hashtable of all registered elements
-    private Hashtable _attributes; // Hashtable of all registered attributes
+    private Map<String, Integer> _elements;   // Map of all registered elements
+    private Map<String, Integer> _attributes; // Map of all registered attributes
 
     // Namespace index tables
     private int       _nextNSType; // Next available namespace type
     private Vector    _namespaceIndex; // Index of all registered namespaces
-    private Hashtable _namespaces; // Hashtable of all registered namespaces
-    private Hashtable _namespacePrefixes;// Hashtable of all registered namespace prefixes
+    private Map<String, Integer> _namespaces; // Map of all registered namespaces
+    private Map<String, Integer> _namespacePrefixes;// Map of all registered namespace prefixes
 
 
     // All literal text in the stylesheet
@@ -146,12 +147,30 @@ public final class XSLTC {
      */
     private String _accessExternalDTD = XalanConstants.EXTERNAL_ACCESS_DEFAULT;
 
+    private XMLSecurityManager _xmlSecurityManager;
+
+    private final FeatureManager _featureManager;
+
+    /**
+    *  Extension function class loader variables
+    */
+
+    /* Class loader reference that will be used for external extension functions loading */
+    private ClassLoader _extensionClassLoader;
+
+    /**
+    *  HashMap with the loaded classes
+    */
+    private final Map<String, Class> _externalExtensionFunctions;
 
     /**
      * XSLTC compiler constructor
      */
-    public XSLTC(boolean useServicesMechanism) {
+    public XSLTC(boolean useServicesMechanism, FeatureManager featureManager) {
         _parser = new Parser(this, useServicesMechanism);
+        _featureManager = featureManager;
+        _extensionClassLoader = null;
+        _externalExtensionFunctions = new HashMap<>();
     }
 
     /**
@@ -181,15 +200,28 @@ public final class XSLTC {
         _useServicesMechanism = flag;
     }
 
+     /**
+     * Return the value of the specified feature
+     * @param name name of the feature
+     * @return true if the feature is enabled, false otherwise
+     */
+    public boolean getFeature(Feature name) {
+        return _featureManager.isFeatureEnabled(name);
+    }
+
     /**
      * Return allowed protocols for accessing external stylesheet.
      */
-    public String getProperty(String name) {
+    public Object getProperty(String name) {
         if (name.equals(XMLConstants.ACCESS_EXTERNAL_STYLESHEET)) {
             return _accessExternalStylesheet;
         }
         else if (name.equals(XMLConstants.ACCESS_EXTERNAL_DTD)) {
             return _accessExternalDTD;
+        } else if (name.equals(XalanConstants.SECURITY_MANAGER)) {
+            return _xmlSecurityManager;
+        } else if (name.equals(XalanConstants.JDK_EXTENSION_CLASSLOADER)) {
+            return _extensionClassLoader;
         }
         return null;
     }
@@ -197,12 +229,19 @@ public final class XSLTC {
     /**
      * Set allowed protocols for accessing external stylesheet.
      */
-    public void setProperty(String name, String value) {
+    public void setProperty(String name, Object value) {
         if (name.equals(XMLConstants.ACCESS_EXTERNAL_STYLESHEET)) {
             _accessExternalStylesheet = (String)value;
         }
         else if (name.equals(XMLConstants.ACCESS_EXTERNAL_DTD)) {
             _accessExternalDTD = (String)value;
+        } else if (name.equals(XalanConstants.SECURITY_MANAGER)) {
+            _xmlSecurityManager = (XMLSecurityManager)value;
+        } else if (name.equals(XalanConstants.JDK_EXTENSION_CLASSLOADER)) {
+            _extensionClassLoader = (ClassLoader) value;
+            /* Clear the external extension functions HashMap if extension class
+               loader was changed */
+            _externalExtensionFunctions.clear();
         }
     }
 
@@ -237,18 +276,53 @@ public final class XSLTC {
         _bcelClasses = new Vector();
     }
 
+    private void setExternalExtensionFunctions(String name, Class clazz) {
+        if (_isSecureProcessing && clazz != null && !_externalExtensionFunctions.containsKey(name)) {
+            _externalExtensionFunctions.put(name, clazz);
+        }
+    }
+
+    /*
+     * Function loads an external extension functions.
+     * The filtering of function types (external,internal) takes place in FunctionCall class
+     *
+     */
+    Class loadExternalFunction(String name) throws ClassNotFoundException {
+        Class loaded = null;
+        //Check if the function is not loaded already
+        if (_externalExtensionFunctions.containsKey(name)) {
+            loaded = _externalExtensionFunctions.get(name);
+        } else if (_extensionClassLoader != null) {
+            loaded = Class.forName(name, true, _extensionClassLoader);
+            setExternalExtensionFunctions(name, loaded);
+        }
+        if (loaded == null) {
+            throw new ClassNotFoundException(name);
+        }
+        //Return loaded class
+        return (Class) loaded;
+    }
+
+    /*
+     * Returns unmodifiable view of HashMap with loaded external extension
+     * functions - will be needed for the TransformerImpl
+    */
+    public Map<String, Class> getExternalExtensionFunctions() {
+        return Collections.unmodifiableMap(_externalExtensionFunctions);
+    }
+
     /**
      * Initializes the compiler to produce a new translet
      */
     private void reset() {
         _nextGType      = DTM.NTYPES;
-        _elements       = new Hashtable();
-        _attributes     = new Hashtable();
-        _namespaces     = new Hashtable();
+        _elements       = new HashMap<>();
+        _attributes     = new HashMap<>();
+        _namespaces     = new HashMap<>();
         _namespaces.put("",new Integer(_nextNSType));
         _namesIndex     = new Vector(128);
         _namespaceIndex = new Vector(32);
-        _namespacePrefixes = new Hashtable();
+        _namespacePrefixes = new HashMap<>();
         _stylesheet     = null;
         _parser.init();
         //_variableSerial     = 1;
@@ -264,6 +338,7 @@ public final class XSLTC {
             -1,         // LEVEL_MULTIPLE
             -1          // LEVEL_ANY
         };
+        _externalExtensionFunctions.clear();
     }
 
     /**
@@ -687,9 +762,9 @@ public final class XSLTC {
      * DOM attribute types at run-time.
      */
     public int registerAttribute(QName name) {
-        Integer code = (Integer)_attributes.get(name.toString());
+        Integer code = _attributes.get(name.toString());
         if (code == null) {
-            code = new Integer(_nextGType++);
+            code = _nextGType++;
             _attributes.put(name.toString(), code);
             final String uri = name.getNamespace();
             final String local = "@"+name.getLocalPart();
@@ -710,9 +785,9 @@ public final class XSLTC {
      */
     public int registerElement(QName name) {
         // Register element (full QName)
-        Integer code = (Integer)_elements.get(name.toString());
+        Integer code = _elements.get(name.toString());
         if (code == null) {
-            _elements.put(name.toString(), code = new Integer(_nextGType++));
+            _elements.put(name.toString(), code = _nextGType++);
             _namesIndex.addElement(name.toString());
         }
         if (name.getLocalPart().equals("*")) {
@@ -728,9 +803,9 @@ public final class XSLTC {
 
     public int registerNamespacePrefix(QName name) {
 
-    Integer code = (Integer)_namespacePrefixes.get(name.toString());
+    Integer code = _namespacePrefixes.get(name.toString());
     if (code == null) {
-        code = new Integer(_nextGType++);
+        code = _nextGType++;
         _namespacePrefixes.put(name.toString(), code);
         final String uri = name.getNamespace();
         if ((uri != null) && (!uri.equals(""))){
@@ -748,9 +823,9 @@ public final class XSLTC {
      * DOM namespace types at run-time.
      */
     public int registerNamespace(String namespaceURI) {
-        Integer code = (Integer)_namespaces.get(namespaceURI);
+        Integer code = _namespaces.get(namespaceURI);
         if (code == null) {
-            code = new Integer(_nextNSType++);
+            code = _nextNSType++;
             _namespaces.put(namespaceURI,code);
             _namespaceIndex.addElement(namespaceURI);
         }

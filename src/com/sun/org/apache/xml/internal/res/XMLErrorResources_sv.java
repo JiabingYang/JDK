@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /*
@@ -16,9 +16,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/*
- * $Id: XMLErrorResources_sv.java,v 1.2.4.1 2005/09/15 07:45:46 suresh_emailid Exp $
  */
 package com.sun.org.apache.xml.internal.res;
 
@@ -179,7 +176,7 @@ public class XMLErrorResources_sv extends ListResourceBundle
   // Error messages...
 
   /** The lookup table for error messages.   */
-  private static final Object[][] _contents = {
+  private static final Object[][] contents = {
 
   /** Error message ID that has a null message, but takes in a single object.    */
     {"ER0000" , "{0}" },
@@ -378,8 +375,8 @@ public class XMLErrorResources_sv extends ListResourceBundle
 
     { "BAD_CODE", "Parameter f\u00F6r createMessage ligger utanf\u00F6r gr\u00E4nsv\u00E4rdet"},
     { "FORMAT_FAILED", "Undantag utl\u00F6st vid messageFormat-anrop"},
-    { "line", "Rad #"},
-    { "column","Kolumn #"},
+    { "line", "Rad nr"},
+    { "column","Kolumn nr"},
 
     {ER_SERIALIZER_NOT_CONTENTHANDLER,
       "Serializerklassen ''{0}'' implementerar inte org.xml.sax.ContentHandler."},
@@ -447,6 +444,7 @@ public class XMLErrorResources_sv extends ListResourceBundle
    */
 
     protected Object[][] getContents() {
-        return _contents;
+        return contents;
     }
+
 }

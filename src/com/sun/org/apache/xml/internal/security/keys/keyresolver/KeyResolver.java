@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -31,14 +31,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.crypto.SecretKey;
 
+import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.DEREncodedKeyValueResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.DSAKeyValueResolver;
+import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.KeyInfoReferenceResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.RSAKeyValueResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.RetrievalMethodResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.X509CertificateResolver;
+import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.X509DigestResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.X509IssuerSerialResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.X509SKIResolver;
 import com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations.X509SubjectNameResolver;
 import com.sun.org.apache.xml.internal.security.keys.storage.StorageResolver;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
@@ -172,9 +176,12 @@ public class KeyResolver {
      * @throws InstantiationException
      * @throws IllegalAccessException
      * @throws ClassNotFoundException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the key resolver
      */
     public static void register(String className, boolean globalResolver)
         throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        JavaUtils.checkRegisterPermission();
         KeyResolverSpi keyResolverSpi =
             (KeyResolverSpi) Class.forName(className).newInstance();
         keyResolverSpi.setGlobalResolver(globalResolver);
@@ -192,8 +199,11 @@ public class KeyResolver {
      *
      * @param className
      * @param globalResolver Whether the KeyResolverSpi is a global resolver or not
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the key resolver
      */
     public static void registerAtStart(String className, boolean globalResolver) {
+        JavaUtils.checkRegisterPermission();
         KeyResolverSpi keyResolverSpi = null;
         Exception ex = null;
         try {
@@ -225,11 +235,14 @@ public class KeyResolver {
      *
      * @param keyResolverSpi a KeyResolverSpi instance to register
      * @param start whether to register the KeyResolverSpi at the start of the list or not
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the key resolver
      */
     public static void register(
         KeyResolverSpi keyResolverSpi,
         boolean start
     ) {
+        JavaUtils.checkRegisterPermission();
         KeyResolver resolver = new KeyResolver(keyResolverSpi);
         if (start) {
             resolverVector.add(0, resolver);
@@ -251,9 +264,12 @@ public class KeyResolver {
      * @throws InstantiationException
      * @throws IllegalAccessException
      * @throws ClassNotFoundException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the key resolver
      */
     public static void registerClassNames(List<String> classNames)
         throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        JavaUtils.checkRegisterPermission();
         List<KeyResolver> keyResolverList = new ArrayList<KeyResolver>(classNames.size());
         for (String className : classNames) {
             KeyResolverSpi keyResolverSpi =
@@ -277,6 +293,9 @@ public class KeyResolver {
         keyResolverList.add(new KeyResolver(new RetrievalMethodResolver()));
         keyResolverList.add(new KeyResolver(new X509SubjectNameResolver()));
         keyResolverList.add(new KeyResolver(new X509IssuerSerialResolver()));
+        keyResolverList.add(new KeyResolver(new DEREncodedKeyValueResolver()));
+        keyResolverList.add(new KeyResolver(new KeyInfoReferenceResolver()));
+        keyResolverList.add(new KeyResolver(new X509DigestResolver()));
 
         resolverVector.addAll(keyResolverList);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  *
  *
@@ -50,14 +50,15 @@ class DirectMethodHandle extends MethodHandle {
     // Constructors and factory methods in this class *must* be package scoped or private.
     private DirectMethodHandle(MethodType mtype, LambdaForm form, MemberName member) {
         super(mtype, form);
-        if (!member.isResolved())
-            throw new InternalError();
+        if (!member.isResolved())  throw new InternalError();
 
-        if (member.getDeclaringClass().isInterface() && !member.isAbstract()) {
-           // Check for corner case: invokeinterface of Object method
+        if (member.getDeclaringClass().isInterface() &&
+                member.isMethod() && !member.isAbstract()) {
+            // Check for corner case: invokeinterface of Object method
             MemberName m = new MemberName(Object.class, member.getName(), member.getMethodType(), member.getReferenceKind());
             m = MemberName.getFactory().resolveOrNull(m.getReferenceKind(), m, null);
             if (m != null && m.isPublic()) {
+                assert(member.getReferenceKind() == m.getReferenceKind());  // else this.form is wrong
                 member = m;
             }
         }
@@ -66,8 +67,7 @@ class DirectMethodHandle extends MethodHandle {
     }
 
     // Factory methods:
-
-    static DirectMethodHandle make(Class<?> receiver, MemberName member) {
+    static DirectMethodHandle make(byte refKind, Class<?> receiver, MemberName member) {
         MethodType mtype = member.getMethodOrFieldType();
         if (!member.isStatic()) {
             if (!member.getDeclaringClass().isAssignableFrom(receiver) || member.isConstructor())
@@ -75,8 +75,14 @@ class DirectMethodHandle extends MethodHandle {
             mtype = mtype.insertParameterTypes(0, receiver);
         }
         if (!member.isField()) {
-            LambdaForm lform = preparedLambdaForm(member);
-            return new DirectMethodHandle(mtype, lform, member);
+            if (refKind == REF_invokeSpecial) {
+                member = member.asSpecial();
+                LambdaForm lform = preparedLambdaForm(member);
+                return new Special(mtype, lform, member);
+            } else {
+                LambdaForm lform = preparedLambdaForm(member);
+                return new DirectMethodHandle(mtype, lform, member);
+            }
         } else {
             LambdaForm lform = preparedFieldLambdaForm(member);
             if (member.isStatic()) {
@@ -89,6 +95,12 @@ class DirectMethodHandle extends MethodHandle {
                 return new Accessor(mtype, lform, member, (int)offset);
             }
         }
+    }
+    static DirectMethodHandle make(Class<?> receiver, MemberName member) {
+        byte refKind = member.getReferenceKind();
+        if (refKind == REF_invokeSpecial)
+            refKind =  REF_invokeVirtual;
+        return make(refKind, receiver, member);
     }
     static DirectMethodHandle make(MemberName member) {
         if (member.isConstructor())
@@ -114,13 +126,19 @@ class DirectMethodHandle extends MethodHandle {
     }
 
     @Override
+    BoundMethodHandle rebind() {
+        return BoundMethodHandle.makeReinvoker(this);
+    }
+
+    @Override
     MethodHandle copyWith(MethodType mt, LambdaForm lf) {
+        assert(this.getClass() == DirectMethodHandle.class);  // must override in subclasses
         return new DirectMethodHandle(mt, lf, member);
     }
 
     @Override
     String internalProperties() {
-        return "/DMH="+member.toString();
+        return "\n& DMH.MN="+internalMemberName();
     }
 
     //// Implementation methods.
@@ -130,44 +148,7 @@ class DirectMethodHandle extends MethodHandle {
         return member;
     }
 
-    @Override
-    MethodHandle bindArgument(int pos, char basicType, Object value) {
-        // If the member needs dispatching, do so.
-        if (pos == 0 && basicType == 'L') {
-            DirectMethodHandle concrete = maybeRebind(value);
-            if (concrete != null)
-                return concrete.bindReceiver(value);
-        }
-        return super.bindArgument(pos, basicType, value);
-    }
-
-    @Override
-    MethodHandle bindReceiver(Object receiver) {
-        // If the member needs dispatching, do so.
-        DirectMethodHandle concrete = maybeRebind(receiver);
-        if (concrete != null)
-            return concrete.bindReceiver(receiver);
-        return super.bindReceiver(receiver);
-    }
-
     private static final MemberName.Factory IMPL_NAMES = MemberName.getFactory();
-
-    private DirectMethodHandle maybeRebind(Object receiver) {
-        if (receiver != null) {
-            switch (member.getReferenceKind()) {
-            case REF_invokeInterface:
-            case REF_invokeVirtual:
-                // Pre-dispatch the member.
-                Class<?> concreteClass = receiver.getClass();
-                MemberName concrete = new MemberName(concreteClass, member.getName(), member.getMethodType(), REF_invokeSpecial);
-                concrete = IMPL_NAMES.resolveOrNull(REF_invokeSpecial, concrete, concreteClass);
-                if (concrete != null)
-                    return new DirectMethodHandle(type(), preparedLambdaForm(concrete), concrete);
-                break;
-            }
-        }
-        return null;
-    }
 
     /**
      * Create a LF which can invoke the given method.
@@ -177,7 +158,7 @@ class DirectMethodHandle extends MethodHandle {
     private static LambdaForm preparedLambdaForm(MemberName m) {
         assert(m.isInvocable()) : m;  // call preparedFieldLambdaForm instead
         MethodType mtype = m.getInvocationType().basicType();
-        assert(!m.isMethodHandleInvoke() || "invokeBasic".equals(m.getName())) : m;
+        assert(!m.isMethodHandleInvoke()) : m;
         int which;
         switch (m.getReferenceKind()) {
         case REF_invokeVirtual:    which = LF_INVVIRTUAL;    break;
@@ -242,16 +223,17 @@ class DirectMethodHandle extends MethodHandle {
         assert(names.length == nameCursor);
         if (doesAlloc) {
             // names = { argx,y,z,... new C, init method }
-            names[NEW_OBJ] = new Name(NF_allocateInstance, names[DMH_THIS]);
-            names[GET_MEMBER] = new Name(NF_constructorMethod, names[DMH_THIS]);
+            names[NEW_OBJ] = new Name(Lazy.NF_allocateInstance, names[DMH_THIS]);
+            names[GET_MEMBER] = new Name(Lazy.NF_constructorMethod, names[DMH_THIS]);
         } else if (needsInit) {
-            names[GET_MEMBER] = new Name(NF_internalMemberNameEnsureInit, names[DMH_THIS]);
+            names[GET_MEMBER] = new Name(Lazy.NF_internalMemberNameEnsureInit, names[DMH_THIS]);
         } else {
-            names[GET_MEMBER] = new Name(NF_internalMemberName, names[DMH_THIS]);
+            names[GET_MEMBER] = new Name(Lazy.NF_internalMemberName, names[DMH_THIS]);
         }
+        assert(findDirectMethodHandle(names[GET_MEMBER]) == names[DMH_THIS]);
         Object[] outArgs = Arrays.copyOfRange(names, ARG_BASE, GET_MEMBER+1, Object[].class);
         assert(outArgs[outArgs.length-1] == names[GET_MEMBER]);  // look, shifted args!
-        int result = LambdaForm.LAST_RESULT;
+        int result = LAST_RESULT;
         if (doesAlloc) {
             assert(outArgs[outArgs.length-2] == names[NEW_OBJ]);  // got to move this one
             System.arraycopy(outArgs, 0, outArgs, 1, outArgs.length-2);
@@ -259,11 +241,21 @@ class DirectMethodHandle extends MethodHandle {
             result = NEW_OBJ;
         }
         names[LINKER_CALL] = new Name(linker, outArgs);
-        lambdaName += "_" + LambdaForm.basicTypeSignature(mtype);
+        lambdaName += "_" + shortenSignature(basicTypeSignature(mtype));
         LambdaForm lform = new LambdaForm(lambdaName, ARG_LIMIT, names, result);
         // This is a tricky bit of code.  Don't send it through the LF interpreter.
         lform.compileToBytecode();
         return lform;
+    }
+
+    static Object findDirectMethodHandle(Name name) {
+        if (name.function == Lazy.NF_internalMemberName ||
+            name.function == Lazy.NF_internalMemberNameEnsureInit ||
+            name.function == Lazy.NF_constructorMethod) {
+            assert(name.arguments.length == 1);
+            return name.arguments[0];
+        }
+        return null;
     }
 
     private static void maybeCompile(LambdaForm lform, MemberName m) {
@@ -368,6 +360,21 @@ class DirectMethodHandle extends MethodHandle {
         ((DirectMethodHandle)mh).ensureInitialized();
     }
 
+    /** This subclass represents invokespecial instructions. */
+    static class Special extends DirectMethodHandle {
+        private Special(MethodType mtype, LambdaForm form, MemberName member) {
+            super(mtype, form, member);
+        }
+        @Override
+        boolean isInvokeSpecial() {
+            return true;
+        }
+        @Override
+        MethodHandle copyWith(MethodType mt, LambdaForm lf) {
+            return new Special(mt, lf, member);
+        }
+    }
+
     /** This subclass handles constructor references. */
     static class Constructor extends DirectMethodHandle {
         final MemberName initMethod;
@@ -379,6 +386,10 @@ class DirectMethodHandle extends MethodHandle {
             this.initMethod = initMethod;
             this.instanceClass = instanceClass;
             assert(initMethod.isResolved());
+        }
+        @Override
+        MethodHandle copyWith(MethodType mt, LambdaForm lf) {
+            return new Constructor(mt, lf, member, initMethod, instanceClass);
         }
     }
 
@@ -405,6 +416,10 @@ class DirectMethodHandle extends MethodHandle {
 
         @Override Object checkCast(Object obj) {
             return fieldType.cast(obj);
+        }
+        @Override
+        MethodHandle copyWith(MethodType mt, LambdaForm lf) {
+            return new Accessor(mt, lf, member, fieldOffset);
         }
     }
 
@@ -444,6 +459,10 @@ class DirectMethodHandle extends MethodHandle {
 
         @Override Object checkCast(Object obj) {
             return fieldType.cast(obj);
+        }
+        @Override
+        MethodHandle copyWith(MethodType mt, LambdaForm lf) {
+            return new StaticAccessor(mt, lf, member, staticBase, staticOffset);
         }
     }
 
@@ -595,18 +614,18 @@ class DirectMethodHandle extends MethodHandle {
         final int RESULT    = nameCursor-1;  // either the call or the cast
         Name[] names = arguments(nameCursor - ARG_LIMIT, mtype.invokerType());
         if (needsInit)
-            names[INIT_BAR] = new Name(NF_ensureInitialized, names[DMH_THIS]);
+            names[INIT_BAR] = new Name(Lazy.NF_ensureInitialized, names[DMH_THIS]);
         if (needsCast && !isGetter)
-            names[PRE_CAST] = new Name(NF_checkCast, names[DMH_THIS], names[SET_VALUE]);
+            names[PRE_CAST] = new Name(Lazy.NF_checkCast, names[DMH_THIS], names[SET_VALUE]);
         Object[] outArgs = new Object[1 + linkerType.parameterCount()];
         assert(outArgs.length == (isGetter ? 3 : 4));
         outArgs[0] = UNSAFE;
         if (isStatic) {
-            outArgs[1] = names[F_HOLDER]  = new Name(NF_staticBase, names[DMH_THIS]);
-            outArgs[2] = names[F_OFFSET]  = new Name(NF_staticOffset, names[DMH_THIS]);
+            outArgs[1] = names[F_HOLDER]  = new Name(Lazy.NF_staticBase, names[DMH_THIS]);
+            outArgs[2] = names[F_OFFSET]  = new Name(Lazy.NF_staticOffset, names[DMH_THIS]);
         } else {
-            outArgs[1] = names[OBJ_CHECK] = new Name(NF_checkBase, names[OBJ_BASE]);
-            outArgs[2] = names[F_OFFSET]  = new Name(NF_fieldOffset, names[DMH_THIS]);
+            outArgs[1] = names[OBJ_CHECK] = new Name(Lazy.NF_checkBase, names[OBJ_BASE]);
+            outArgs[2] = names[F_OFFSET]  = new Name(Lazy.NF_fieldOffset, names[DMH_THIS]);
         }
         if (!isGetter) {
             outArgs[3] = (needsCast ? names[PRE_CAST] : names[SET_VALUE]);
@@ -614,7 +633,7 @@ class DirectMethodHandle extends MethodHandle {
         for (Object a : outArgs)  assert(a != null);
         names[LINKER_CALL] = new Name(linker, outArgs);
         if (needsCast && isGetter)
-            names[POST_CAST] = new Name(NF_checkCast, names[DMH_THIS], names[LINKER_CALL]);
+            names[POST_CAST] = new Name(Lazy.NF_checkCast, names[DMH_THIS], names[LINKER_CALL]);
         for (Name n : names)  assert(n != null);
         String fieldOrStatic = (isStatic ? "Static" : "Field");
         String lambdaName = (linkerName + fieldOrStatic);  // significant only for debugging
@@ -623,48 +642,54 @@ class DirectMethodHandle extends MethodHandle {
         return new LambdaForm(lambdaName, ARG_LIMIT, names, RESULT);
     }
 
-    private static final NamedFunction
-            NF_internalMemberName,
-            NF_internalMemberNameEnsureInit,
-            NF_ensureInitialized,
-            NF_fieldOffset,
-            NF_checkBase,
-            NF_staticBase,
-            NF_staticOffset,
-            NF_checkCast,
-            NF_allocateInstance,
-            NF_constructorMethod;
-    static {
-        try {
-            NamedFunction nfs[] = {
-                NF_internalMemberName = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("internalMemberName", Object.class)),
-                NF_internalMemberNameEnsureInit = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("internalMemberNameEnsureInit", Object.class)),
-                NF_ensureInitialized = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("ensureInitialized", Object.class)),
-                NF_fieldOffset = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("fieldOffset", Object.class)),
-                NF_checkBase = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("checkBase", Object.class)),
-                NF_staticBase = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("staticBase", Object.class)),
-                NF_staticOffset = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("staticOffset", Object.class)),
-                NF_checkCast = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("checkCast", Object.class, Object.class)),
-                NF_allocateInstance = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("allocateInstance", Object.class)),
-                NF_constructorMethod = new NamedFunction(DirectMethodHandle.class
-                    .getDeclaredMethod("constructorMethod", Object.class))
-            };
-            for (NamedFunction nf : nfs) {
-                // Each nf must be statically invocable or we get tied up in our bootstraps.
-                assert(InvokerBytecodeGenerator.isStaticallyInvocable(nf.member)) : nf;
-                nf.resolve();
+    /**
+     * Pre-initialized NamedFunctions for bootstrapping purposes.
+     * Factored in an inner class to delay initialization until first usage.
+     */
+    private static class Lazy {
+        static final NamedFunction
+                NF_internalMemberName,
+                NF_internalMemberNameEnsureInit,
+                NF_ensureInitialized,
+                NF_fieldOffset,
+                NF_checkBase,
+                NF_staticBase,
+                NF_staticOffset,
+                NF_checkCast,
+                NF_allocateInstance,
+                NF_constructorMethod;
+        static {
+            try {
+                NamedFunction nfs[] = {
+                        NF_internalMemberName = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("internalMemberName", Object.class)),
+                        NF_internalMemberNameEnsureInit = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("internalMemberNameEnsureInit", Object.class)),
+                        NF_ensureInitialized = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("ensureInitialized", Object.class)),
+                        NF_fieldOffset = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("fieldOffset", Object.class)),
+                        NF_checkBase = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("checkBase", Object.class)),
+                        NF_staticBase = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("staticBase", Object.class)),
+                        NF_staticOffset = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("staticOffset", Object.class)),
+                        NF_checkCast = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("checkCast", Object.class, Object.class)),
+                        NF_allocateInstance = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("allocateInstance", Object.class)),
+                        NF_constructorMethod = new NamedFunction(DirectMethodHandle.class
+                                .getDeclaredMethod("constructorMethod", Object.class))
+                };
+                for (NamedFunction nf : nfs) {
+                    // Each nf must be statically invocable or we get tied up in our bootstraps.
+                    assert(InvokerBytecodeGenerator.isStaticallyInvocable(nf.member)) : nf;
+                    nf.resolve();
+                }
+            } catch (ReflectiveOperationException ex) {
+                throw newInternalError(ex);
             }
-        } catch (ReflectiveOperationException ex) {
-            throw newInternalError(ex);
         }
     }
 }

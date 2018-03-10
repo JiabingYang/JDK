@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 /**
@@ -39,7 +39,9 @@ import com.sun.org.apache.xml.internal.security.c14n.implementations.Canonicaliz
 import com.sun.org.apache.xml.internal.security.c14n.implementations.Canonicalizer20010315ExclWithComments;
 import com.sun.org.apache.xml.internal.security.c14n.implementations.Canonicalizer20010315OmitComments;
 import com.sun.org.apache.xml.internal.security.c14n.implementations.Canonicalizer20010315WithComments;
+import com.sun.org.apache.xml.internal.security.c14n.implementations.CanonicalizerPhysical;
 import com.sun.org.apache.xml.internal.security.exceptions.AlgorithmAlreadyRegisteredException;
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -91,6 +93,11 @@ public class Canonicalizer {
      */
     public static final String ALGO_ID_C14N11_WITH_COMMENTS =
         ALGO_ID_C14N11_OMIT_COMMENTS + "#WithComments";
+    /**
+     * Non-standard algorithm to serialize the physical representation for XML Encryption
+     */
+    public static final String ALGO_ID_C14N_PHYSICAL =
+        "http://santuario.apache.org/c14n/physical";
 
     private static Map<String, Class<? extends CanonicalizerSpi>> canonicalizerHash =
         new ConcurrentHashMap<String, Class<? extends CanonicalizerSpi>>();
@@ -136,10 +143,13 @@ public class Canonicalizer {
      * @param algorithmURI
      * @param implementingClass
      * @throws AlgorithmAlreadyRegisteredException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the canonicalizer
      */
     @SuppressWarnings("unchecked")
     public static void register(String algorithmURI, String implementingClass)
         throws AlgorithmAlreadyRegisteredException, ClassNotFoundException {
+        JavaUtils.checkRegisterPermission();
         // check whether URI is already registered
         Class<? extends CanonicalizerSpi> registeredClass =
             canonicalizerHash.get(algorithmURI);
@@ -160,9 +170,12 @@ public class Canonicalizer {
      * @param algorithmURI
      * @param implementingClass
      * @throws AlgorithmAlreadyRegisteredException
+     * @throws SecurityException if a security manager is installed and the
+     *    caller does not have permission to register the canonicalizer
      */
-    public static void register(String algorithmURI, Class<CanonicalizerSpi> implementingClass)
+    public static void register(String algorithmURI, Class<? extends CanonicalizerSpi> implementingClass)
         throws AlgorithmAlreadyRegisteredException, ClassNotFoundException {
+        JavaUtils.checkRegisterPermission();
         // check whether URI is already registered
         Class<? extends CanonicalizerSpi> registeredClass = canonicalizerHash.get(algorithmURI);
 
@@ -201,6 +214,10 @@ public class Canonicalizer {
         canonicalizerHash.put(
             Canonicalizer.ALGO_ID_C14N11_WITH_COMMENTS,
             Canonicalizer11_WithComments.class
+        );
+        canonicalizerHash.put(
+            Canonicalizer.ALGO_ID_C14N_PHYSICAL,
+            CanonicalizerPhysical.class
         );
     }
 
